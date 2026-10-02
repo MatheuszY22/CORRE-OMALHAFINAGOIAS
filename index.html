@@ -155,6 +155,11 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-si
 .sc.s4{background:var(--latebg);color:var(--late)}.sc.s5{background:var(--warnbg);color:var(--warn)}.sc.s6{background:var(--yellow-soft);color:var(--yellow-ink)}.sc.s7{background:rgba(236,131,90,.24);color:var(--warn)}
 .grp{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 9px;background:var(--th);border-top:1px solid var(--line2);flex-wrap:wrap}
 .grp b{font-size:12.5px}
+.grp .meta{font-size:12px;color:var(--muted2)}
+.gtg{display:flex;align-items:baseline;gap:4px 8px;flex:1 1 300px;min-width:0;flex-wrap:wrap;border:0;background:none;padding:2px 0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.gtg i{flex:none;width:11px;font-style:normal;font-size:11px;color:var(--accent)}
+.gtg:hover b,.tn[data-tog]:hover{text-decoration:underline;text-decoration-color:var(--accent)}
+.tn[data-tog]{cursor:pointer}
 .grp .bulk{display:flex;gap:5px;flex-wrap:wrap}
 .bt{font-size:10.5px;padding:3px 8px;border:1px solid var(--line);background:var(--card);border-radius:14px;cursor:pointer;color:var(--fg)}
 .bt:hover{background:var(--hover)}
@@ -762,7 +767,7 @@ function linha(t){
   var tags=(t.c!=='própria'?'<span class="tag h">'+t.c+(t.c==='herdada'?' de '+esc(t.rm):'')+'</span>':'')+(t.st?'<span class="tag nc">não obrigado</span>':'')+(foraPrazo(t)?'<span class="tag nc">concluída fora do prazo</span>':'');
   return '<div class="'+cl+'" data-id="'+t.id+'">'+
    '<input type="checkbox" class="cbx" '+(done(t)?'checked':'')+' aria-label="Concluir">'+
-   '<div class="ti"><div class="tn">'+esc(t.e)+'</div>'+
+   '<div class="ti"><div class="tn" data-tog="'+t.id+'" tabindex="0" title="Clique para abrir ou recolher as críticas">'+esc(t.e)+'</div>'+
    '<div class="tm"><span>IE '+t.ie+'</span><span>'+esc(t.mu||'')+'</span><span>Competência <b>'+t.r+'</b></span><span class="when">'+fdata(t.d)+' · '+(t.p?'tarde':'manhã')+'</span><span>'+esc(t.w)+'</span>'+tags+'</div>'+
    (S[t.id]&&S[t.id].at?'<div class="who">'+(fimDe(S[t.id])?'concluída em '+fimTxt(S[t.id])+' · ':'')+quem(S[t.id])+(S[t.id].ajustePor?' · '+ajusteTxt(S[t.id]):'')+'</div>':'')+
    (ADM&&done(t)&&db&&db.fb?'<button class="lnk" data-ajd="'+t.id+'" style="margin-right:14px">Ajustar data da conclusão</button>':'')+
@@ -809,6 +814,10 @@ function selHtml(id,i,s){
   var o='';for(var k=0;k<STN.length;k++)o+='<option value="'+k+'"'+(k===s?' selected':'')+'>'+esc(STN[k])+'</option>';
   return '<select class="stsel s'+s+'" data-sel="'+id+'" data-i="'+i+'">'+o+'</select>';
 }
+// Tipos de crítica abertos ou recolhidos dentro da competência. Com um tipo só, já abre; com vários, começam recolhidos
+// para dar a visão geral, e cada um abre ao clicar no nome.
+var GRP={};
+function gab(id,g,n){var k=id+':'+g;return k in GRP?GRP[k]:n===1;}
 function detalhe(t){
   var n=NT[t.id],h='';
   if(n){
@@ -829,14 +838,16 @@ function detalhe(t){
       (cf.n.I?'<button class="bt" data-cfsel="'+t.id+'">Selecionar inconclusivas</button>':''))+'</div>';
     else h+='<div class="cfbar"><span>Sem conferência automática: o SPED de '+t.r+' desta empresa ainda não foi importado.</span><button class="bt" data-cfimp="1">Importar SPED / XML</button></div>';
     var por={};n.r.forEach(function(r,i){(por[r[0]]=por[r[0]]||[]).push(i);});
-    var mostrados=0,cortou=false;
-    Object.keys(por).forEach(function(g){
-      var idxs=por[g],tp=n.t[g],sv=0,ga=0;idxs.forEach(function(i){sv+=n.r[i][2];if(cst(t.id,i).s|0)ga++;});
+    var ks=Object.keys(por),mostrados=0,cortou=false,nab=0;
+    if(ks.length>1)h+='<div class="cfbar"><span><b>'+ks.length+' tipos de crítica:</b> clique no nome do tipo para abrir ou recolher as notas.</span><button class="bt" data-gall="'+t.id+'" data-o="1">Abrir todos</button><button class="bt" data-gall="'+t.id+'" data-o="0">Recolher todos</button></div>';
+    ks.forEach(function(g){
+      var idxs=por[g],tp=n.t[g],sv=0,ga=0,ab=gab(t.id,g,ks.length);idxs.forEach(function(i){sv+=n.r[i][2];if(cst(t.id,i).s|0)ga++;});
+      if(ab)nab+=idxs.length;
       var todosSel=idxs.every(function(i){return SEL[selKey(t.id,i)];});
-      h+='<div class="grp"><b>'+esc(tp[0])+'</b><span class="meta">'+esc(tp[1])+' · '+num(idxs.length)+(idxs.length===1?' crítica · ':' críticas · ')+brl(sv)+' · '+num(ga)+(ga===1?' avaliada (':' avaliadas (')+Math.floor(ga*100/idxs.length)+'%)</span>'+
+      h+='<div class="grp"><button class="gtg" data-gtg="'+t.id+'" data-g="'+g+'" aria-expanded="'+ab+'"><i>'+(ab?'▾':'▸')+'</i><b>'+esc(tp[0])+'</b><span class="meta">'+esc(tp[1])+' · '+num(idxs.length)+(idxs.length===1?' crítica · ':' críticas · ')+brl(sv)+' · '+num(ga)+(ga===1?' avaliada (':' avaliadas (')+Math.floor(ga*100/idxs.length)+'%)</span></button>'+
         '<label class="grpchk"><input type="checkbox" class="nsel" data-grpsel="'+t.id+'" data-g="'+g+'"'+(todosSel?' checked':'')+'> selecionar as '+num(idxs.length)+'</label>'+
-        '<span class="bulk">Marcar todas: '+[1,2,3,4,5,6,7].map(function(s){return '<button class="bt" data-lote="'+t.id+'" data-g="'+g+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+'<button class="bt" data-chg="'+t.id+'" data-g="'+g+'">Chaves deste tipo (TXT)</button></span></div>';
-      idxs.forEach(function(i){
+        (ab?'<span class="bulk">Marcar todas: '+[1,2,3,4,5,6,7].map(function(s){return '<button class="bt" data-lote="'+t.id+'" data-g="'+g+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+'<button class="bt" data-chg="'+t.id+'" data-g="'+g+'">Chaves deste tipo (TXT)</button></span>':'')+'</div>';
+      if(ab)idxs.forEach(function(i){
         if(mostrados>=max){cortou=true;return;}
         mostrados++;
         var r=n.r[i],st=cst(t.id,i);
@@ -851,7 +862,7 @@ function detalhe(t){
           '</div>';
       });
     });
-    if(cortou)h+='<button class="more" data-more="'+t.id+'">Mostrar mais '+Math.min(300,n.r.length-mostrados)+' críticas (de '+num(n.r.length)+')</button>';
+    if(cortou)h+='<button class="more" data-more="'+t.id+'">Mostrar mais '+Math.min(300,nab-mostrados)+' críticas (de '+num(nab)+')</button>';
     h+='</div>';
   }else{
     h+='<div class="det"><table><thead><tr><th>Operação</th><th>Tipo de crítica</th><th class="n">Qtd.</th><th class="n">Valor</th></tr></thead><tbody>';
@@ -1420,6 +1431,12 @@ document.addEventListener('click',function(e){
   if(lo){var id=lo.dataset.lote,g=+lo.dataset.g,s=+lo.dataset.s,n=NT[id],idxs=[],lm=s===6?pedirMes():'';
     if(s===6&&!lm)return;
     n.r.forEach(function(r,i){if(r[0]===g)idxs.push(i);});salvarLote(id,idxs,s,null,lm);return;}
+  var tg=e.target.closest('[data-tog]');
+  if(tg){var tb=document.querySelector('[data-det="'+tg.dataset.tog+'"]');if(tb)abrir(tb);return;}
+  var gt=e.target.closest('[data-gtg]');
+  if(gt){GRP[gt.dataset.gtg+':'+gt.dataset.g]=gt.getAttribute('aria-expanded')!=='true';abrir(document.querySelector('[data-det="'+gt.dataset.gtg+'"]'),true);return;}
+  var gl=e.target.closest('[data-gall]');
+  if(gl){NT[gl.dataset.gall].r.forEach(function(r){GRP[gl.dataset.gall+':'+r[0]]=gl.dataset.o==='1';});abrir(document.querySelector('[data-det="'+gl.dataset.gall+'"]'),true);return;}
   var mo=e.target.closest('[data-more]');
   if(mo){var mid=mo.dataset.more;lim[mid]=(lim[mid]||150)+300;var b=document.querySelector('[data-det="'+mid+'"]');abrir(b,true);return;}
   if(e.target.closest('#menu')){document.getElementById('side').classList.add('aberto');return;}
@@ -1482,7 +1499,7 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape')document.getElementById('rel').classList.add('hide');
-  else if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[data-rel][tabindex],tr[data-ir]')){e.preventDefault();e.target.click();}
+  else if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[data-rel][tabindex],tr[data-ir],[data-tog]')){e.preventDefault();e.target.click();}
 });
 // O clique no "Replicar" não pode tirar o foco da anotação antes da hora: a lista é redesenhada ao sair do campo e o clique se perderia.
 document.addEventListener('mousedown',function(e){if(e.target.closest&&e.target.closest('[data-rep]'))e.preventDefault();});
