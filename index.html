@@ -150,7 +150,7 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-si
 .stchips{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0 2px}
 .sc{font-size:10.5px;padding:2px 8px;border-radius:9px;font-weight:600;background:var(--barbg);color:var(--muted)}
 .sc.s1{background:var(--accent-soft);color:var(--accent)}.sc.s2{background:var(--okbg);color:var(--ok)}.sc.s3{background:var(--barbg);color:var(--muted)}
-.sc.s4{background:var(--latebg);color:var(--late)}.sc.s5{background:var(--warnbg);color:var(--warn)}.sc.s6{background:var(--yellow-soft);color:var(--yellow-ink)}
+.sc.s4{background:var(--latebg);color:var(--late)}.sc.s5{background:var(--warnbg);color:var(--warn)}.sc.s6{background:var(--yellow-soft);color:var(--yellow-ink)}.sc.s7{background:rgba(236,131,90,.24);color:var(--warn)}
 .grp{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 9px;background:var(--th);border-top:1px solid var(--line2);flex-wrap:wrap}
 .grp b{font-size:12.5px}
 .grp .bulk{display:flex;gap:5px;flex-wrap:wrap}
@@ -162,7 +162,7 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-si
 .nt .id small{display:block;color:var(--muted2);font-size:10.5px;overflow-wrap:anywhere}
 .nt .vl{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .nt select{font:inherit;font-family:var(--f-body);font-size:11.5px;padding:3px 6px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--fg);max-width:200px}
-.nt select.s1{border-color:var(--accent)}.nt select.s2{border-color:var(--ok)}.nt select.s4{border-color:var(--late)}.nt select.s5{border-color:var(--warn)}.nt select.s6{border-color:#C9A800}
+.nt select.s1{border-color:var(--accent)}.nt select.s2{border-color:var(--ok)}.nt select.s4{border-color:var(--late)}.nt select.s5{border-color:var(--warn)}.nt select.s6{border-color:#C9A800}.nt select.s7{border-color:#ec835a}
 .mesl{display:block;margin-top:4px;font-family:var(--f-body);font-size:11px;color:var(--muted)}
 .mesn{width:76px;font:inherit;font-family:var(--f-mono);padding:3px 6px;border:1px solid #C9A800;border-radius:7px;background:var(--card);color:var(--fg);text-align:center}
 .nt .obsn{grid-column:1/-1;font:inherit;font-size:11.5px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
@@ -282,7 +282,7 @@ table.big tr[data-rel]:hover td,#relb tr[data-ir]:hover td{background:var(--hove
 <section id="crono" class="hide">
  <div class="toolbar">
   <input id="q" type="search" placeholder="Buscar empresa, IE ou competência…">
-  <select id="fst"><option value="">Todas as situações</option><option value="p">Pendentes</option><option value="a">Atrasadas</option><option value="c">Concluídas</option><option value="x">Concluídas fora do prazo</option><option value="h">Do dia</option><option value="s">Com críticas sem avaliação</option><option value="b">Com bug da SEFAZ</option><option value="f">Conferidas com o SPED</option><option value="r">Com crítica confirmada no SPED</option></select>
+  <select id="fst"><option value="">Todas as situações</option><option value="p">Pendentes</option><option value="a">Atrasadas</option><option value="c">Concluídas</option><option value="x">Concluídas fora do prazo</option><option value="h">Do dia</option><option value="s">Com críticas sem avaliação</option><option value="n">Com crítica pendente</option><option value="b">Com bug da SEFAZ</option><option value="f">Conferidas com o SPED</option><option value="r">Com crítica confirmada no SPED</option></select>
   <select id="fwk"><option value="">Todas as semanas</option></select>
  </div>
  <div class="chips" id="chips" style="margin-bottom:6px"></div>
@@ -335,7 +335,7 @@ table.big tr[data-rel]:hover td,#relb tr[data-ir]:hover td{background:var(--hove
 var D=JSON.parse(document.getElementById('dados').textContent);
 var T=D.tasks, AV=D.av, NT=D.notas||{}, S={}, C={}, db=null, uid=null, U=null, canWrite=true, NOMES={}, EU='';
 // A situação 6 é a crítica já verificada cuja correção entra no SPED de outro mês; o mês fica no campo m da crítica (MM/AAAA).
-var STN=['Sem avaliação','A corrigir','Corrigida','Não será corrigida','Bug da SEFAZ','Em análise','Corrigir no SPED do mês'];
+var STN=['Sem avaliação','A corrigir','Corrigida','Não será corrigida','Bug da SEFAZ','Em análise','Corrigir no SPED do mês','Pendente'];
 function mesAtual(){return HOJE.slice(5,7)+'/'+HOJE.slice(0,4);}
 function mesOk(v){var m=/^\s*(\d{1,2})\s*[\/\-. ]?\s*(\d{4})\s*$/.exec(v||'');return m&&+m[1]>=1&&+m[1]<=12?('0'+(+m[1])).slice(-2)+'/'+m[2]:'';}
 function pedirMes(){
@@ -634,14 +634,15 @@ function kpis(){
   var vt=0,vc=0;T.forEach(function(t){vt+=t.v;if(done(t))vc+=t.v;});
   var hoje=T.filter(function(t){return t.d===HOJE;}),hc=hoje.filter(done).length;
   var av=0,tc=0;T.forEach(function(x){var r=resumo(x);if(r){r=prog(r);tc+=r.tot;av+=r.av;}});
-  var nfp=T.filter(foraPrazo).length;
+  var nfp=T.filter(foraPrazo).length,npd=0;T.forEach(function(x){var r=resumo(x);if(r)npd+=r[7];});
   var K=[['Pendências concluídas',c+' de '+tot,(tot?Math.round(c*100/tot):0)+'% do plano'+(nfp?' · '+nfp+' fora do prazo':''),c===tot?'ok':''],
+   ['Pendentes',(tot-c)+' de '+tot,npd?num(npd)+(npd===1?' crítica marcada':' críticas marcadas')+' como Pendente':'competências ainda em aberto',''],
    ['Valor já resolvido',brlc(vc),'de '+brlc(vt)+' em críticas','ok'],
    ['Atrasadas',String(at),at?'competências com data vencida':'nenhuma data vencida',at?'late':''],
    ['Hoje',hc+' de '+hoje.length,hoje.length?'competências programadas para hoje':'sem programação para hoje',''],
    ['Críticas avaliadas',num(av)+' de '+num(tc),(tc?Math.round(av*100/tc):0)+'% das críticas com PDF',av===tc&&tc?'ok':''],
    ['Término previsto',dt(D.fim).toLocaleDateString('pt-BR'),'início em '+dt(D.start).toLocaleDateString('pt-BR'),'']];
-  document.getElementById('kpis').innerHTML=K.map(function(k,i){return '<button class="kpi '+k[3]+'" data-rel="'+'cvahkt'.charAt(i)+'" title="Abrir a lista"><span class="l">'+k[0]+'</span><span class="v">'+k[1]+'</span><span class="s">'+k[2]+'</span></button>';}).join('');
+  document.getElementById('kpis').innerHTML=K.map(function(k,i){return '<button class="kpi '+k[3]+'" data-rel="'+'ctvahkt'.charAt(i)+'" title="Abrir a lista"><span class="l">'+k[0]+'</span><span class="v">'+k[1]+'</span><span class="s">'+k[2]+'</span></button>';}).join('');
   document.getElementById('gbar').style.width=(tot?c*100/tot:0)+'%';
 }
 function painel(){
@@ -715,6 +716,7 @@ function passa(t){
   if(s==='h'&&t.d!==HOJE)return false;
   if(s==='s'){var r1=resumo(t);if(!r1||!r1[0])return false;}
   if(s==='b'){var r2=resumo(t);if(!r2||!r2[4])return false;}
+  if(s==='n'){var r3=resumo(t);if(!r3||!r3[7])return false;}
   if(s==='f'&&!CONF[t.id])return false;
   if(s==='r'&&!(CONF[t.id]&&CONF[t.id].n.R))return false;
   if(s==='x'&&!foraPrazo(t))return false;
@@ -745,7 +747,7 @@ function resumochips(t){
   var r=resumo(t);if(!r)return'';
   var h='<div class="stchips">';
   if(r[0])h+='<span class="sc s0">'+r[0]+' sem avaliação</span>';
-  for(var i=1;i<STN.length;i++)if(r[i])h+='<span class="sc s'+i+'">'+r[i]+' '+(i===6?'para o SPED de outro mês':esc(STN[i].toLowerCase()))+'</span>';
+  for(var i=1;i<STN.length;i++)if(r[i])h+='<span class="sc s'+i+'">'+r[i]+' '+(i===6?'para o SPED de outro mês':i===7?(r[i]===1?'pendente':'pendentes'):esc(STN[i].toLowerCase()))+'</span>';
   var cf=CONF[t.id];
   if(cf)h+='<span class="sc cfc">SPED: '+cfRes(cf.n)+'</span>';
   return h+'</div>';
@@ -786,7 +788,7 @@ function detalhe(t){
     var selc=selIdx(t.id);
     h+='<div class="det">';
     h+='<div class="selbar'+(selc.length?'':' hide')+'" data-selbar="'+t.id+'"><span>'+selc.length+' crítica'+(selc.length===1?'':'s')+' selecionada'+(selc.length===1?'':'s')+'</span>'+
-      '<span>Marcar como:</span>'+[1,2,3,4,5,6].map(function(s){return '<button class="bt" data-selap="'+t.id+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+
+      '<span>Marcar como:</span>'+[1,2,3,4,5,6,7].map(function(s){return '<button class="bt" data-selap="'+t.id+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+
       '<button class="bt" data-chs="'+t.id+'">Baixar chaves (TXT)</button><button class="bt" data-selclr="'+t.id+'">Limpar seleção</button></div>';
     var cf=CONF[t.id];
     h+='<div class="cfbar"><span><b>Baixar:</b></span><button class="bt" data-xls="'+t.id+'">Planilha desta competência (Excel)</button><button class="bt" data-chv="'+t.id+'">Chaves de todas as notas (TXT)</button>'+
@@ -805,7 +807,7 @@ function detalhe(t){
       var todosSel=idxs.every(function(i){return SEL[selKey(t.id,i)];});
       h+='<div class="grp"><b>'+esc(tp[0])+'</b><span class="meta">'+esc(tp[1])+' · '+num(idxs.length)+(idxs.length===1?' crítica · ':' críticas · ')+brl(sv)+' · '+num(ga)+(ga===1?' avaliada (':' avaliadas (')+Math.floor(ga*100/idxs.length)+'%)</span>'+
         '<label class="grpchk"><input type="checkbox" class="nsel" data-grpsel="'+t.id+'" data-g="'+g+'"'+(todosSel?' checked':'')+'> selecionar as '+num(idxs.length)+'</label>'+
-        '<span class="bulk">Marcar todas: '+[1,2,3,4,5,6].map(function(s){return '<button class="bt" data-lote="'+t.id+'" data-g="'+g+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+'<button class="bt" data-chg="'+t.id+'" data-g="'+g+'">Chaves deste tipo (TXT)</button></span></div>';
+        '<span class="bulk">Marcar todas: '+[1,2,3,4,5,6,7].map(function(s){return '<button class="bt" data-lote="'+t.id+'" data-g="'+g+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+'<button class="bt" data-chg="'+t.id+'" data-g="'+g+'">Chaves deste tipo (TXT)</button></span></div>';
       idxs.forEach(function(i){
         if(mostrados>=max){cortou=true;return;}
         mostrados++;
@@ -1318,8 +1320,8 @@ function relatorio(k,w,sem){
     if(k==='t')ts=ts.filter(function(t){return !done(t);});
     ts.sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:a.w.localeCompare(b.w);});
     tit=k==='t'?'Competências em aberto':ts.length?'Semana de '+fdata(ts[0].d)+' a '+fdata(ts[ts.length-1].d):'Semana';
-    cab=CB.concat(['Situação','Críticas avaliadas','Valor']);
-    lin=ts.map(function(t){return base(t).concat([situacao(t),aval(t),brl(t.v)]);});
+    cab=CB.concat(['Situação','Críticas avaliadas','Críticas pendentes','Valor']);
+    lin=ts.map(function(t){var r=resumo(t);return base(t).concat([situacao(t),aval(t),r?num(r[7]):'—',brl(t.v)]);});
   }
   if(w)tit+=' — '+w;
   ts.forEach(function(t){vt+=t.v;});
@@ -1418,7 +1420,7 @@ document.addEventListener('click',function(e){
   if(rp){replicar(rp.dataset.rep,+rp.dataset.i,rp.parentNode.querySelector('.obsn').value);return;}
   var ca=e.target.closest('[data-cfap]');
   if(ca){var fid=ca.dataset.cfap,fc=CONF[fid],fi=[];
-    if(fc&&fc.r)fc.r.forEach(function(v,i){var s0=cst(fid,i).s|0;if(v[0]===ca.dataset.c&&(s0===0||s0===1||s0===5))fi.push(i);});
+    if(fc&&fc.r)fc.r.forEach(function(v,i){var s0=cst(fid,i).s|0;if(v[0]===ca.dataset.c&&(s0===0||s0===1||s0===5||s0===7))fi.push(i);});
     if(fi.length)salvarLote(fid,fi,+ca.dataset.s);
     stmsg(fi.length?num(fi.length)+(fi.length===1?' crítica marcada':' críticas marcadas')+' como “'+STN[+ca.dataset.s]+'”. As que já estavam corrigidas, sem correção ou como bug não foram alteradas.':'Nenhuma crítica em aberto nesse grupo: nada foi alterado.');return;}
   var cs=e.target.closest('[data-cfsel]');
