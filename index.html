@@ -284,6 +284,7 @@ table.big tr[data-rel]:hover td,#relb tr[data-ir]:hover td{background:var(--hove
  <div class="chips" id="chips" style="margin-bottom:6px"></div>
  <div class="acoes"><label class="note" for="eu">Sou:</label><select id="eu"><option value="">— escolher —</option></select>
  <button id="exp">Exportar andamento (CSV)</button>
+ <button id="expx">Exportar andamento (Excel)</button>
  <button id="expj">Exportar cópia (JSON)</button>
  <button id="impj">Importar cópia (JSON)</button>
  <input id="fimp" type="file" accept="application/json,.json" style="display:none">
@@ -431,6 +432,11 @@ async function iniciar(){
     stmsg('Marcações salvas e compartilhadas com a equipe. Última atualização: '+new Date().toLocaleTimeString('pt-BR')+'.');
     if(db.fb&&!(prim&2)){prim|=2;if(prim===3)subirLocal();}
   },function(e){if(!recusado(e))stmsg('Não foi possível ler as marcações ('+e.code+'). O quadro está em modo leitura.',true);});
+  if(db.fb)db.collection('conf').onSnapshot(function(snap){
+    var novo={};snap.docs.forEach(function(d){var v=d.data(),a=CONFR[d.id];
+      novo[d.id]=a&&a.at===v.at?a:{n:v.n||{R:0,N:0,I:0},tot:v.tot||0,fin:v.fin||'',by:v.by||'',at:v.at||'',rem:true};});
+    CONFR=novo;juntarConf();nomes();render();
+  },function(){});
 }
 
 function mostrarEU(){
@@ -532,7 +538,7 @@ async function subirLocal(){
 var fila={};
 async function nomes(){
   if(!U)return;
-  var ids={};Object.keys(S).forEach(function(k){if(S[k].by)ids[S[k].by]=1;});Object.keys(C).forEach(function(k){if(C[k].by)ids[C[k].by]=1;});
+  var ids={};Object.keys(S).forEach(function(k){if(S[k].by)ids[S[k].by]=1;});Object.keys(C).forEach(function(k){if(C[k].by)ids[C[k].by]=1;});Object.keys(CONFR).forEach(function(k){if(CONFR[k].by)ids[CONFR[k].by]=1;});
   var lista=Object.keys(ids).filter(function(i){return !(i in NOMES);});
   if(!lista.length)return;
   try{var ps=await U.profiles(Object.keys(ids));Object.keys(ps).forEach(function(i){NOMES[i]=ps[i].name||'';});render();}catch(e){}
@@ -777,12 +783,16 @@ function detalhe(t){
     h+='<div class="det">';
     h+='<div class="selbar'+(selc.length?'':' hide')+'" data-selbar="'+t.id+'"><span>'+selc.length+' crítica'+(selc.length===1?'':'s')+' selecionada'+(selc.length===1?'':'s')+'</span>'+
       '<span>Marcar como:</span>'+[1,2,3,4,5,6].map(function(s){return '<button class="bt" data-selap="'+t.id+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+
-      '<button class="bt" data-selclr="'+t.id+'">Limpar seleção</button></div>';
+      '<button class="bt" data-chs="'+t.id+'">Baixar chaves (TXT)</button><button class="bt" data-selclr="'+t.id+'">Limpar seleção</button></div>';
     var cf=CONF[t.id];
-    if(cf)h+='<div class="cfbar"><span><b>Conferência com o SPED '+(cf.arq.cab.fin==='1'?'retificador':'original')+' de '+t.r+':</b> '+cfRes(cf.n)+'</span>'+
+    h+='<div class="cfbar"><span><b>Baixar:</b></span><button class="bt" data-xls="'+t.id+'">Planilha desta competência (Excel)</button><button class="bt" data-chv="'+t.id+'">Chaves de todas as notas (TXT)</button>'+
+      (cf&&cf.r&&cf.n.I?'<button class="bt" data-chx="'+t.id+'">Chaves das que precisam de XML (TXT)</button>':'')+'</div>';
+    if(cf&&!cf.r)carregarConf(t.id);
+    if(cf)h+='<div class="cfbar"><span><b>Conferência com o SPED '+(cf.fin==='1'?'retificador':'original')+' de '+t.r+':</b> '+cfRes(cf.n)+(cf.rem&&cf.at?' · feita por '+esc(NOMES[cf.by]||'alguém')+' em '+dhora(cf.at):'')+'</span>'+
+      (!cf.r?'<span>'+(cf.erro?'Não foi possível carregar o detalhe da análise.':'Carregando o detalhe da análise…')+'</span>':
       (cf.n.R?'<button class="bt" data-cfap="'+t.id+'" data-c="R" data-s="1">Marcar confirmadas como “A corrigir”</button>':'')+
       (cf.n.N?'<button class="bt" data-cfap="'+t.id+'" data-c="N" data-s="2">Marcar não confirmadas como “Corrigida”</button><button class="bt" data-cfap="'+t.id+'" data-c="N" data-s="4">ou como “Bug da SEFAZ”</button>':'')+
-      (cf.n.I?'<button class="bt" data-cfsel="'+t.id+'">Selecionar inconclusivas</button>':'')+'</div>';
+      (cf.n.I?'<button class="bt" data-cfsel="'+t.id+'">Selecionar inconclusivas</button>':''))+'</div>';
     else h+='<div class="cfbar"><span>Sem conferência automática: o SPED de '+t.r+' desta empresa ainda não foi importado.</span><button class="bt" data-cfimp="1">Importar SPED / XML</button></div>';
     var por={};n.r.forEach(function(r,i){(por[r[0]]=por[r[0]]||[]).push(i);});
     var mostrados=0,cortou=false;
@@ -791,7 +801,7 @@ function detalhe(t){
       var todosSel=idxs.every(function(i){return SEL[selKey(t.id,i)];});
       h+='<div class="grp"><b>'+esc(tp[0])+'</b><span class="meta">'+esc(tp[1])+' · '+num(idxs.length)+(idxs.length===1?' crítica · ':' críticas · ')+brl(sv)+' · '+num(ga)+(ga===1?' avaliada (':' avaliadas (')+Math.floor(ga*100/idxs.length)+'%)</span>'+
         '<label class="grpchk"><input type="checkbox" class="nsel" data-grpsel="'+t.id+'" data-g="'+g+'"'+(todosSel?' checked':'')+'> selecionar as '+num(idxs.length)+'</label>'+
-        '<span class="bulk">Marcar todas: '+[1,2,3,4,5,6].map(function(s){return '<button class="bt" data-lote="'+t.id+'" data-g="'+g+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+'</span></div>';
+        '<span class="bulk">Marcar todas: '+[1,2,3,4,5,6].map(function(s){return '<button class="bt" data-lote="'+t.id+'" data-g="'+g+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+'<button class="bt" data-chg="'+t.id+'" data-g="'+g+'">Chaves deste tipo (TXT)</button></span></div>';
       idxs.forEach(function(i){
         if(mostrados>=max){cortou=true;return;}
         mostrados++;
@@ -802,7 +812,7 @@ function detalhe(t){
           (st.s===6?'<label class="mesl">SPED de <input class="mesn" data-mesn="'+t.id+'" data-i="'+i+'" value="'+esc(st.m||'')+'" placeholder="MM/AAAA" inputmode="numeric" maxlength="7"></label>':'')+'</div>'+
           (st.s?'<input class="obsn" data-obsn="'+t.id+'" data-i="'+i+'" placeholder="Anotação (protocolo, motivo, nº do chamado…)" value="'+esc(st.o||'')+'">':'')+
           (st.s&&idxs.length>1?'<button class="lnk rep" data-rep="'+t.id+'" data-i="'+i+'">Replicar este texto nas outras '+num(idxs.length-1)+(idxs.length===2?' crítica':' críticas')+' deste tipo</button>':'')+
-          (cf?'<div class="cf c'+cf.r[i][0]+'"><b>'+CFN[cf.r[i][0]]+'</b>'+esc(cf.r[i][1])+'</div>':'')+
+          (cf&&cf.r&&cf.r[i]?'<div class="cf c'+cf.r[i][0]+'"><b>'+CFN[cf.r[i][0]]+'</b>'+esc(cf.r[i][1])+'</div>':'')+
           '</div>';
       });
     });
@@ -845,6 +855,35 @@ function tipos(){
    O resultado diz só se o fato apontado pela SEFAZ aparece no arquivo: R confirmada, N não confirmada, I inconclusiva.
    Nada é gravado: os arquivos ficam na memória e somem ao recarregar a página. */
 var SPEDS={},XMLS={},CONF={};
+// CONFL é o que foi conferido nesta sessão; CONFR é o que está salvo no banco da equipe (resumo por competência, com o
+// detalhe por crítica buscado só ao abrir). CONF é a junção, com o desta sessão na frente.
+var CONFL={},CONFR={};
+function juntarConf(){var k;CONF={};for(k in CONFR)CONF[k]=CONFR[k];for(k in CONFL)CONF[k]=CONFL[k];}
+async function salvarConf(ids){
+  if(!db||!db.fb||!ids.length)return LOCAL&&ids.length?' No modo local a análise não fica salva: entre com seu usuário e importe de novo.':'';
+  try{
+    for(var x=0;x<ids.length;x++){
+      var id=ids[x],c=CONFL[id],nk=Math.ceil(c.r.length/CHUNK);
+      for(var k=0;k<nk;k++){
+        var it={};for(var i=k*CHUNK;i<Math.min(c.r.length,(k+1)*CHUNK);i++)it[i]=c.r[i];
+        await db.doc('confd/'+id+'__'+k).set({r:it});
+      }
+      await db.doc('conf/'+id).set({n:c.n,tot:c.r.length,fin:c.fin||'',by:uid||'',at:new Date().toISOString()});
+    }
+    return ' Análise salva: a equipe e os gestores já veem o resultado.';
+  }catch(e){return ' Não foi possível salvar a análise para a equipe ('+(e.code||e.message)+').';}
+}
+async function carregarConf(id,quieto){
+  var c=CONF[id];
+  if(!c||c.r||c.lendo||c.erro||!db||!db.fb)return;
+  c.lendo=true;
+  try{
+    var r=[],nk=Math.ceil((c.tot||0)/CHUNK);
+    for(var k=0;k<nk;k++){var d=await db.doc('confd/'+id+'__'+k).get();if(d.exists){var it=d.data().r||{};for(var i in it)r[+i]=it[i];}}
+    c.r=r;
+  }catch(e){c.erro=true;}
+  c.lendo=false;if(!quieto)render();
+}
 var CFN={R:'Confirmada',N:'Não confirmada',I:'Inconclusiva'};
 var SIT={'00':'regular','01':'regular extemporâneo','02':'cancelado','03':'cancelado extemporâneo','04':'denegado','05':'inutilizado','06':'complementar','07':'complementar extemporâneo','08':'regime especial'};
 function nsp(s){s=String(s==null?'':s).trim();if(!s)return 0;if(s.indexOf(',')>=0)s=s.replace(/\./g,'').replace(',','.');return parseFloat(s)||0;}
@@ -981,14 +1020,15 @@ function conferirNota(tipo,r,S0,E,per){
   return ['I','Tipo de crítica sem regra de conferência automática.'];
 }
 function conferirTudo(){
-  CONF={};
+  CONFL={};
   T.forEach(function(t){
     var n=NT[t.id],k=t.id.split('-'),E=SPEDS[k[0].replace(/^0+/,'')],S0=E&&E[k[1]];
     if(!n||!S0)return;
-    var o={arq:S0,r:[],n:{R:0,N:0,I:0}};
+    var o={fin:S0.cab.fin,r:[],n:{R:0,N:0,I:0}};
     n.r.forEach(function(r,i){var v=conferirNota(n.t[r[0]][0],r,S0,E,k[1]);o.r[i]=v;o.n[v[0]]++;});
-    CONF[t.id]=o;
+    CONFL[t.id]=o;
   });
+  juntarConf();
 }
 function decod(u8){try{return new TextDecoder('utf-8',{fatal:true}).decode(u8);}catch(e){return new TextDecoder('windows-1252').decode(u8);}}
 async function lerZip(buf,cada){
@@ -1025,12 +1065,14 @@ async function importarConf(files){
     }catch(e){ign++;}
   }
   conferirTudo();
-  var ids=Object.keys(CONF),tt={R:0,N:0,I:0};
-  ids.forEach(function(id){tt.R+=CONF[id].n.R;tt.N+=CONF[id].n.N;tt.I+=CONF[id].n.I;});
+  var ids=Object.keys(CONFL),tt={R:0,N:0,I:0};
+  ids.forEach(function(id){tt.R+=CONFL[id].n.R;tt.N+=CONFL[id].n.N;tt.I+=CONFL[id].n.I;});
   if(ids.length){filtro.st='f';document.getElementById('fst').value='f';}
   render();
+  if(ids.length&&db&&db.fb)stmsg('Salvando a análise para a equipe…');
+  var salvo=await salvarConf(ids);
   stmsg('Conferência: '+ns+' SPED e '+nx+' XML lidos. '+(ids.length?num(tt.R+tt.N+tt.I)+' críticas conferidas em '+ids.length+(ids.length===1?' competência: ':' competências: ')+num(tt.R)+' confirmadas, '+num(tt.N)+' não confirmadas e '+num(tt.I)+' inconclusivas.':'Nenhuma competência do quadro tem SPED importado: confira a inscrição estadual e o período do arquivo.')+
-    (fora?' '+fora+' SPED de empresa ou mês que não está no quadro.':'')+(semdet?' '+semdet+' SPED de competência sem detalhe nota a nota.':'')+(ign?' '+ign+(ign===1?' arquivo ignorado.':' arquivos ignorados.'):''),!ids.length);
+    (fora?' '+fora+' SPED de empresa ou mês que não está no quadro.':'')+(semdet?' '+semdet+' SPED de competência sem detalhe nota a nota.':'')+(ign?' '+ign+(ign===1?' arquivo ignorado.':' arquivos ignorados.'):'')+salvo,!ids.length);
 }
 
 /* ---------- consolidado ---------- */
@@ -1137,14 +1179,81 @@ async function sincronizar(){
     stmsg('Andamento importado e enviado para a equipe.');
   }catch(e){stmsg('Importado aqui, mas não foi possível enviar para a equipe ('+e.code+').',true);}
 }
+/* Planilha Excel de verdade (.xlsx): a chave de 44 dígitos vai como texto, sem virar notação científica como acontece no CSV. */
+var CRCT=null;
+function crc32(u){
+  if(!CRCT){CRCT=[];for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;CRCT[n]=c>>>0;}}
+  var r=-1;for(var i=0;i<u.length;i++)r=CRCT[(r^u[i])&255]^(r>>>8);return (r^-1)>>>0;
+}
+async function zipar(arqs){
+  var enc=new TextEncoder(),partes=[],cd=[],off=0,tcd=0;
+  for(var x=0;x<arqs.length;x++){
+    var bruto=enc.encode(arqs[x].d),nm=enc.encode(arqs[x].n),crc=crc32(bruto),dados=bruto,met=0;
+    if(window.CompressionStream){try{dados=new Uint8Array(await new Response(new Blob([bruto]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());met=8;}catch(e){dados=bruto;met=0;}}
+    var h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(8,met,true);h.setUint16(12,0x21,true);
+    h.setUint32(14,crc,true);h.setUint32(18,dados.length,true);h.setUint32(22,bruto.length,true);h.setUint16(26,nm.length,true);
+    partes.push(new Uint8Array(h.buffer),nm,dados);
+    var c=new DataView(new ArrayBuffer(46));
+    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(10,met,true);c.setUint16(14,0x21,true);
+    c.setUint32(16,crc,true);c.setUint32(20,dados.length,true);c.setUint32(24,bruto.length,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+    cd.push(new Uint8Array(c.buffer),nm);tcd+=46+nm.length;off+=30+nm.length+dados.length;
+  }
+  var f=new DataView(new ArrayBuffer(22));
+  f.setUint32(0,0x06054b50,true);f.setUint16(8,arqs.length,true);f.setUint16(10,arqs.length,true);f.setUint32(12,tcd,true);f.setUint32(16,off,true);
+  return new Blob(partes.concat(cd,[new Uint8Array(f.buffer)]),{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+// linhas: a primeira é o cabeçalho; número vai como número, o resto como texto.
+async function baixarXlsx(nome,aba,linhas){
+  var x=function(s){return String(s==null?'':s).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var P='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',M='http://schemas.openxmlformats.org/spreadsheetml/2006/main',R='http://schemas.openxmlformats.org/officeDocument/2006/relationships',K='http://schemas.openxmlformats.org/package/2006/relationships';
+  var folha=P+'<worksheet xmlns="'+M+'"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetData>'+
+    linhas.map(function(l){return '<row>'+l.map(function(c){return typeof c==='number'?'<c><v>'+c+'</v></c>':'<c t="inlineStr"><is><t xml:space="preserve">'+x(c)+'</t></is></c>';}).join('')+'</row>';}).join('')+'</sheetData></worksheet>';
+  var b=await zipar([
+    {n:'[Content_Types].xml',d:P+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'},
+    {n:'_rels/.rels',d:P+'<Relationships xmlns="'+K+'"><Relationship Id="rId1" Type="'+R+'/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+    {n:'xl/workbook.xml',d:P+'<workbook xmlns="'+M+'" xmlns:r="'+R+'"><sheets><sheet name="'+x(aba)+'" sheetId="1" r:id="rId1"/></sheets></workbook>'},
+    {n:'xl/_rels/workbook.xml.rels',d:P+'<Relationships xmlns="'+K+'"><Relationship Id="rId1" Type="'+R+'/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'},
+    {n:'xl/worksheets/sheet1.xml',d:folha}]);
+  baixar(nome,b,b.type);
+}
+function linhasDe(t){
+  var n=NT[t.id],cf=CONF[t.id],d=S[t.id]||{};
+  return n.r.map(function(r,i){var st=cst(t.id,i),v=cf&&cf.r&&cf.r[i];
+    return [t.e,t.ie,t.r,t.w,n.t[r[0]][0],n.t[r[0]][1],r[1],r[2],r[4],r[3],r[5]?'Sim':'Não',STN[st.s|0],(st.s|0)===6?st.m||'':'',st.o||'',v?CFN[v[0]]:'',v?v[1]:'',done(t)?'Sim':'Não',d.obs||''];});
+}
+var CABX=['Empresa','IE','Competência','Responsável','Tipo de crítica','Operação','NF','Valor da crítica','CNPJ/CPF','Chave','Cancelada','Situação da crítica','Mês do SPED da correção','Anotação','Conferência com o SPED','Evidência da conferência','Competência concluída','Observação da competência'];
+async function planilha(id){
+  var t=T.filter(function(x){return x.id===id;})[0];
+  await carregarConf(id,true);
+  await baixarXlsx('malha-fina-'+id+'.xlsx','Críticas',[CABX].concat(linhasDe(t)));
+  stmsg('Planilha gerada: '+num(NT[id].r.length)+(NT[id].r.length===1?' crítica':' críticas')+' de '+t.e+' '+t.r+'.');
+}
+async function exportarXlsx(){
+  stmsg('Gerando a planilha…');
+  await Promise.all(Object.keys(CONF).map(function(id){return carregarConf(id,true);}));
+  var L=[CABX];
+  T.forEach(function(t){if(NT[t.id])L=L.concat(linhasDe(t));else L.push([t.e,t.ie,t.r,t.w,'(sem detalhe nota a nota)','','',t.v,'','','','','','','','',done(t)?'Sim':'Não',(S[t.id]||{}).obs||'']);});
+  await baixarXlsx('andamento-malha-fina.xlsx','Críticas',L);
+  stmsg('Planilha gerada com '+num(L.length-1)+' linhas.');
+}
+// Chaves de acesso em TXT, uma por linha e sem repetição: é o formato que os robôs de download de XML recebem.
+function baixarChaves(id,idxs,rotulo){
+  var n=NT[id],visto={},l=[];
+  idxs.forEach(function(i){var c=n.r[i][3];if(c&&!visto[c]){visto[c]=1;l.push(c);}});
+  if(!l.length){stmsg('Nenhuma chave nessa lista.',true);return;}
+  baixar('chaves-'+id+'-'+rotulo+'.txt',l.join('\r\n')+'\r\n','text/plain');
+  stmsg(num(l.length)+(l.length===1?' chave baixada':' chaves baixadas')+' em TXT, uma por linha.');
+}
 async function exportar(){
   var dl=null;try{dl=window.claude&&await window.claude.use('downloads');}catch(e){}
+  await Promise.all(Object.keys(CONF).map(function(id){return carregarConf(id,true);}));
   var L=[['Colaborador','Data prevista','Periodo','Empresa','IE','Competencia','Valor','Concluida','Observacao da competencia','Tipo de critica','Operacao','NF','Valor da critica','CNPJ','Chave','Situacao da critica','Mes do SPED da correcao','Anotacao','Conferencia com o SPED','Evidencia da conferencia']];
   T.forEach(function(t){
     var d=S[t.id]||{},n=NT[t.id],cf=CONF[t.id];
     var base=[t.w,t.d,t.p?'Tarde':'Manhã',t.e,t.ie,t.r,t.v.toFixed(2).replace('.',','),done(t)?'Sim':'Não',d.obs||''];
     if(n&&n.r.length){n.r.forEach(function(r,i){var st=cst(t.id,i);
-      L.push(base.concat([n.t[r[0]][0],n.t[r[0]][1],r[1],r[2].toFixed(2).replace('.',','),r[4],r[3],STN[st.s|0],(st.s|0)===6?st.m||'':'',st.o||'',cf?CFN[cf.r[i][0]]:'',cf?cf.r[i][1]:'']));});}
+      L.push(base.concat([n.t[r[0]][0],n.t[r[0]][1],r[1],r[2].toFixed(2).replace('.',','),r[4],r[3],STN[st.s|0],(st.s|0)===6?st.m||'':'',st.o||'',cf&&cf.r&&cf.r[i]?CFN[cf.r[i][0]]:'',cf&&cf.r&&cf.r[i]?cf.r[i][1]:'']));});}
     else L.push(base.concat(['(sem detalhe por tipo)','','','','','','','','','','']));
   });
   var csv='\ufeff'+L.map(function(r){return r.map(function(c){c=String(c==null?'':c);return '"'+c.replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
@@ -1269,18 +1378,32 @@ document.addEventListener('click',function(e){
   if(e.target.id==='expj'){exportarJson();return;}
   if(e.target.id==='impj'){document.getElementById('fimp').click();return;}
   if(e.target.id==='impc'||e.target.closest('[data-cfimp]')){document.getElementById('fconf').click();return;}
+  if(e.target.id==='expx'){exportarXlsx();return;}
+  var xl=e.target.closest('[data-xls]');
+  if(xl){planilha(xl.dataset.xls);return;}
+  var cv=e.target.closest('[data-chv]');
+  if(cv){baixarChaves(cv.dataset.chv,NT[cv.dataset.chv].r.map(function(r,i){return i;}),'todas');return;}
+  var cx=e.target.closest('[data-chx]');
+  if(cx){var xc=CONF[cx.dataset.chx],xi=[];
+    if(xc&&xc.r)xc.r.forEach(function(v,i){if(v&&v[0]==='I'&&/XML/.test(v[1]))xi.push(i);});
+    baixarChaves(cx.dataset.chx,xi,'precisam-de-xml');return;}
+  var cg=e.target.closest('[data-chg]');
+  if(cg){var gi=[],gn=NT[cg.dataset.chg];gn.r.forEach(function(r,i){if(r[0]===+cg.dataset.g)gi.push(i);});
+    baixarChaves(cg.dataset.chg,gi,gn.t[+cg.dataset.g][0].toLowerCase().normalize('NFD').replace(/[^a-z0-9 ]/g,'').trim().replace(/ +/g,'-'));return;}
+  var cs2=e.target.closest('[data-chs]');
+  if(cs2){baixarChaves(cs2.dataset.chs,selIdx(cs2.dataset.chs),'selecionadas');return;}
   var aj=e.target.closest('[data-ajd]');
   if(aj){ajustarData(aj.dataset.ajd);return;}
   var rp=e.target.closest('[data-rep]');
   if(rp){replicar(rp.dataset.rep,+rp.dataset.i,rp.parentNode.querySelector('.obsn').value);return;}
   var ca=e.target.closest('[data-cfap]');
   if(ca){var fid=ca.dataset.cfap,fc=CONF[fid],fi=[];
-    if(fc)fc.r.forEach(function(v,i){var s0=cst(fid,i).s|0;if(v[0]===ca.dataset.c&&(s0===0||s0===1||s0===5))fi.push(i);});
+    if(fc&&fc.r)fc.r.forEach(function(v,i){var s0=cst(fid,i).s|0;if(v[0]===ca.dataset.c&&(s0===0||s0===1||s0===5))fi.push(i);});
     if(fi.length)salvarLote(fid,fi,+ca.dataset.s);
     stmsg(fi.length?num(fi.length)+(fi.length===1?' crítica marcada':' críticas marcadas')+' como “'+STN[+ca.dataset.s]+'”. As que já estavam corrigidas, sem correção ou como bug não foram alteradas.':'Nenhuma crítica em aberto nesse grupo: nada foi alterado.');return;}
   var cs=e.target.closest('[data-cfsel]');
   if(cs){var sid=cs.dataset.cfsel,sc=CONF[sid];
-    if(sc)sc.r.forEach(function(v,i){if(v[0]==='I')SEL[selKey(sid,i)]=1;});render();return;}
+    if(sc&&sc.r)sc.r.forEach(function(v,i){if(v[0]==='I')SEL[selKey(sid,i)]=1;});render();return;}
   var ce=e.target.closest('[data-cel]');
   if(ce){irPara(ce.dataset.cel);return;}
   if(e.target.id==='relx'||e.target.id==='rel'){document.getElementById('rel').classList.add('hide');return;}
