@@ -161,6 +161,10 @@ button.cel:hover{filter:brightness(1.12)}
 .cf.cN{box-shadow:inset 3px 0 0 var(--good)}.cf.cN b{color:var(--ok)}
 .cf.cI{box-shadow:inset 3px 0 0 #fab219}.cf.cI b{color:var(--warn)}
 .sc.cfc{background:var(--accent-soft);color:var(--accent)}
+.rep{grid-column:1/-1;justify-self:start;margin-top:0;font-size:11.5px}
+.pg{display:flex;align-items:center;gap:9px;margin:7px 0 1px;font-size:11.5px;color:var(--muted)}
+.pg .bar{flex:0 1 190px;margin:0}
+.cel.p[style]{background-image:linear-gradient(90deg,#fff var(--p),rgba(255,255,255,.32) var(--p));background-size:100% 4px;background-position:0 100%;background-repeat:no-repeat}
 @media(max-width:640px){.wrap{padding:16px 11px 70px}h1{font-size:20px}.tv{font-size:12px}.brandbar-in{padding:11px;gap:12px}.brand-logo{height:30px}.brand-proj{font-size:11.5px;padding-left:12px}table.mapa td.emp{min-width:150px;max-width:170px;font-size:12px}}
 </style>
 </head>
@@ -195,7 +199,7 @@ button.cel:hover{filter:brightness(1.12)}
   <select id="fms"><option value="">Todas as empresas</option><option value="a">Com pendência em aberto</option><option value="c">Com tudo concluído</option></select>
  </div>
  <div class="leg">
-  <span><i class="cel p">12</i>Mês com crítica em aberto (quantidade de críticas)</span>
+  <span><i class="cel p" style="--p:40%">12</i>Mês com crítica em aberto (quantidade de críticas; a faixa branca mostra quanto já foi avaliado)</span>
   <span><i class="cel c">✓</i>Pendência concluída</span>
   <span><i class="cel l"></i>Mês sem pendência</span>
   <span><i class="cel x">–</i>Fora do período analisado</span>
@@ -443,13 +447,33 @@ async function salvarCritica(id,i,patch){
     else stmsg('Falha ao salvar a avaliação ('+e.code+').',true);
   }
 }
-async function salvarLote(id,idxs,s){
+/* Replica a anotação (e a situação) de uma crítica nas outras do mesmo tipo da competência.
+   Só entram as que estão sem avaliação ou na mesma situação da origem; as avaliadas de outro jeito ficam como estão. */
+function replicar(id,i,txt){
+  var n=NT[id],g=n.r[i][0],s=cst(id,i).s|0,alvo=[],outro=0,fora=0;
+  txt=(txt||'').trim();
+  if(!txt){stmsg('Escreva a anotação antes de replicar.',true);return;}
+  if(txt.length>500){stmsg('A anotação tem mais de 500 caracteres: encurte o texto para replicar.',true);return;}
+  n.r.forEach(function(r,k){
+    if(r[0]!==g||k===i)return;
+    var c=cst(id,k),cs=c.s|0;
+    if(cs&&cs!==s){fora++;return;}
+    if(c.o&&c.o!==txt)outro++;
+    alvo.push(k);
+  });
+  if(outro&&!confirm(outro+(outro===1?' crítica deste tipo já tem':' críticas deste tipo já têm')+' outro texto.\n\nOK: substitui também. Cancelar: preenche só as que estão sem texto.'))
+    alvo=alvo.filter(function(k){var o=cst(id,k).o;return !o||o===txt;});
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  salvarLote(id,alvo.concat([i]),s,txt);
+  stmsg('Anotação replicada em '+num(alvo.length)+(alvo.length===1?' crítica':' críticas')+' de “'+n.t[g][0]+'”, com a situação “'+STN[s]+'”.'+(fora?' '+num(fora)+' com outra situação não '+(fora===1?'foi alterada.':'foram alteradas.'):''));
+}
+async function salvarLote(id,idxs,s,txt){
   var porChunk={},parc={};
   idxs.forEach(function(i){var c=Math.floor(i/CHUNK);(porChunk[c]=porChunk[c]||[]).push(i);});
   Object.keys(porChunk).forEach(function(c){
     var ck=id+'__'+c,cur=C[ck]||{items:{}},itens=Object.assign({},cur.items);
     parc[ck]={};
-    porChunk[c].forEach(function(i){itens[i]=parc[ck][i]=Object.assign({s:s,o:''},itens[i],{s:s});});
+    porChunk[c].forEach(function(i){itens[i]=parc[ck][i]=Object.assign({s:s,o:''},itens[i],txt==null?{s:s}:{s:s,o:txt});});
     C[ck]={items:itens};
   });
   render();
@@ -486,10 +510,12 @@ function painel(){
     var ts=T.filter(function(t){return t.w===a;}),c=ts.filter(done).length,at=ts.filter(late).length;
     var v=0,vc=0;ts.forEach(function(t){v+=t.v;if(done(t))vc+=t.v;});
     var prox=ts.filter(function(t){return !done(t);})[0];
+    var ga=[0,0,0,0,0,0];ts.forEach(function(t){var r=resumo(t);if(r)for(var i=0;i<6;i++)ga[i]+=r[i];});ga=prog(ga);
     h+='<div class="pc"><h3>'+esc(a)+'</h3><div class="n">'+c+' de '+ts.length+' concluídas · '+Math.round(c*100/ts.length)+'%</div>'+
       '<div class="bar"><i style="width:'+(c*100/ts.length)+'%"></i></div>'+
       '<div class="row"><span>Valor resolvido</span><b>'+brlc(vc)+' / '+brlc(v)+'</b></div>'+
       '<div class="row"><span>Atrasadas</span><b style="color:'+(at?'var(--late)':'inherit')+'">'+at+'</b></div>'+
+      '<div class="row"><span>Críticas avaliadas</span><b>'+num(ga.av)+' de '+num(ga.tot)+' · '+ga.p+'%</b></div>'+
       '<div class="row"><span>'+(prox?'Próxima':'Fila')+'</span><b>'+(prox?esc(prox.e.slice(0,22))+' '+prox.r+' · '+fdata(prox.d):'concluída')+'</b></div>'+
       '<button class="lnk" data-go="'+esc(a)+'">Ver cronograma de '+esc(a)+' →</button></div>';
   });
@@ -553,6 +579,13 @@ function passa(t){
   if(s==='r'&&!(CONF[t.id]&&CONF[t.id].n.R))return false;
   return true;
 }
+// Andamento da avaliação: crítica avaliada é a que já saiu de "Sem avaliação". Só chega a 100% com todas avaliadas.
+function prog(r){var tot=r[0]+r[1]+r[2]+r[3]+r[4]+r[5],av=tot-r[0];return {av:av,tot:tot,p:tot?Math.floor(av*100/tot):0};}
+function progHtml(t){
+  var r=resumo(t);if(!r)return '';
+  var g=prog(r);
+  return '<div class="pg"><div class="bar"><i style="width:'+g.p+'%"></i></div><span>'+num(g.av)+' de '+num(g.tot)+' críticas avaliadas · <b>'+g.p+'%</b></span></div>';
+}
 function linha(t){
   var d=S[t.id]||{},cl='t'+(done(t)?' done':'')+(late(t)?' late':'');
   var tags=(t.c!=='própria'?'<span class="tag h">'+t.c+(t.c==='herdada'?' de '+esc(t.rm):'')+'</span>':'')+(t.st?'<span class="tag nc">não obrigado</span>':'');
@@ -561,7 +594,7 @@ function linha(t){
    '<div class="ti"><div class="tn">'+esc(t.e)+'</div>'+
    '<div class="tm"><span>IE '+t.ie+'</span><span>'+esc(t.mu||'')+'</span><span>Competência <b>'+t.r+'</b></span><span class="when">'+fdata(t.d)+' · '+(t.p?'tarde':'manhã')+'</span><span>'+esc(t.w)+'</span>'+tags+'</div>'+
    (S[t.id]&&S[t.id].at?'<div class="who">'+quem(S[t.id])+'</div>':'')+
-   resumochips(t)+
+   resumochips(t)+progHtml(t)+
    '<button class="lnk" data-det="'+t.id+'">'+(NT[t.id]?'Avaliar críticas':'Ver críticas')+' ('+num(t.q)+')</button>'+
    '<div class="detwrap"></div></div>'+
    '<div class="tv">'+brl(t.v)+'<small>'+num(t.q)+' críticas</small></div></div>';
@@ -622,9 +655,9 @@ function detalhe(t){
     var por={};n.r.forEach(function(r,i){(por[r[0]]=por[r[0]]||[]).push(i);});
     var mostrados=0,cortou=false;
     Object.keys(por).forEach(function(g){
-      var idxs=por[g],tp=n.t[g],sv=0;idxs.forEach(function(i){sv+=n.r[i][2];});
+      var idxs=por[g],tp=n.t[g],sv=0,ga=0;idxs.forEach(function(i){sv+=n.r[i][2];if(cst(t.id,i).s|0)ga++;});
       var todosSel=idxs.every(function(i){return SEL[selKey(t.id,i)];});
-      h+='<div class="grp"><b>'+esc(tp[0])+'</b><span class="meta">'+esc(tp[1])+' · '+num(idxs.length)+(idxs.length===1?' crítica · ':' críticas · ')+brl(sv)+'</span>'+
+      h+='<div class="grp"><b>'+esc(tp[0])+'</b><span class="meta">'+esc(tp[1])+' · '+num(idxs.length)+(idxs.length===1?' crítica · ':' críticas · ')+brl(sv)+' · '+num(ga)+(ga===1?' avaliada (':' avaliadas (')+Math.floor(ga*100/idxs.length)+'%)</span>'+
         '<label class="grpchk"><input type="checkbox" class="nsel" data-grpsel="'+t.id+'" data-g="'+g+'"'+(todosSel?' checked':'')+'> selecionar as '+num(idxs.length)+'</label>'+
         '<span class="bulk">Marcar todas: '+[1,2,3,4,5].map(function(s){return '<button class="bt" data-lote="'+t.id+'" data-g="'+g+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+'</span></div>';
       idxs.forEach(function(i){
@@ -635,6 +668,7 @@ function detalhe(t){
           '<small>'+(r[4]?esc(r[4])+' · ':'')+'chave '+esc(r[3])+'</small></div>'+
           '<div class="vl">'+brl(r[2])+'<br>'+selHtml(t.id,i,st.s)+'</div>'+
           (st.s?'<input class="obsn" data-obsn="'+t.id+'" data-i="'+i+'" placeholder="Anotação (protocolo, motivo, nº do chamado…)" value="'+esc(st.o||'')+'">':'')+
+          (st.s&&idxs.length>1?'<button class="lnk rep" data-rep="'+t.id+'" data-i="'+i+'">Replicar este texto nas outras '+num(idxs.length-1)+(idxs.length===2?' crítica':' críticas')+' deste tipo</button>':'')+
           (cf?'<div class="cf c'+cf.r[i][0]+'"><b>'+CFN[cf.r[i][0]]+'</b>'+esc(cf.r[i][1])+'</div>':'')+
           '</div>';
       });
@@ -655,11 +689,12 @@ function detalhe(t){
 /* ---------- empresas e tipos ---------- */
 function empresas(){
   var por={};
-  T.forEach(function(t){var k=t.e+'|'+t.ie;if(!por[k])por[k]={e:t.e,ie:t.ie,mu:t.mu,w:t.w,n:0,c:0,v:0,vc:0,at:0,ms:[]};
-    var p=por[k];p.n++;p.v+=t.v;p.ms.push(t.r.slice(0,2));if(done(t)){p.c++;p.vc+=t.v;}if(late(t))p.at++;});
+  T.forEach(function(t){var k=t.e+'|'+t.ie;if(!por[k])por[k]={e:t.e,ie:t.ie,mu:t.mu,w:t.w,n:0,c:0,v:0,vc:0,at:0,ms:[],av:0,tc:0};
+    var p=por[k],r=resumo(t);p.n++;p.v+=t.v;p.ms.push(t.r.slice(0,2));if(done(t)){p.c++;p.vc+=t.v;}if(late(t))p.at++;
+    if(r){r=prog(r);p.av+=r.av;p.tc+=r.tot;}});
   var L=Object.keys(por).map(function(k){return por[k];}).sort(function(a,b){return b.v-a.v;});
-  var h='<thead><tr><th>Empresa</th><th>IE</th><th>Responsável</th><th class="n">Competências</th><th class="n">Concluídas</th><th class="n">Atrasadas</th><th class="n">Valor</th><th class="n">Valor resolvido</th></tr></thead><tbody>';
-  L.forEach(function(p){h+='<tr><td>'+esc(p.e)+'<div class="tm"><span>'+esc(p.mu||'')+'</span><span>meses '+p.ms.join(', ')+'</span></div></td><td>'+p.ie+'</td><td>'+esc(p.w)+'</td><td class="n">'+p.n+'</td><td class="n">'+p.c+'</td><td class="n">'+(p.at||'—')+'</td><td class="n">'+brl(p.v)+'</td><td class="n">'+brl(p.vc)+'</td></tr>';});
+  var h='<thead><tr><th>Empresa</th><th>IE</th><th>Responsável</th><th class="n">Competências</th><th class="n">Concluídas</th><th class="n">Atrasadas</th><th class="n">Críticas avaliadas</th><th class="n">Valor</th><th class="n">Valor resolvido</th></tr></thead><tbody>';
+  L.forEach(function(p){h+='<tr><td>'+esc(p.e)+'<div class="tm"><span>'+esc(p.mu||'')+'</span><span>meses '+p.ms.join(', ')+'</span></div></td><td>'+p.ie+'</td><td>'+esc(p.w)+'</td><td class="n">'+p.n+'</td><td class="n">'+p.c+'</td><td class="n">'+(p.at||'—')+'</td><td class="n">'+(p.tc?num(p.av)+' de '+num(p.tc)+' · '+Math.floor(p.av*100/p.tc)+'%':'—')+'</td><td class="n">'+brl(p.v)+'</td><td class="n">'+brl(p.vc)+'</td></tr>';});
   document.getElementById('tempresas').innerHTML=h+'</tbody>';
 }
 function tipos(){
@@ -895,7 +930,8 @@ function mapa(){
       linhas+='<tr><td class="emp">'+esc(p.e)+'<div class="tm"><span>IE '+p.ie+'</span><span>'+esc(p.ws.join(', '))+'</span></div></td>';
       for(var m=1;m<=12;m++){
         var t=p.c[a+'-'+m],ml=MES[m-1]+'/'+a;
-        if(t)linhas+='<td class="m"><button class="cel '+(done(t)?'c':'p')+'" data-cel="'+t.id+'" aria-label="'+ml+': '+num(t.q)+' críticas, '+brl(t.v)+', '+(done(t)?'concluída':'em aberto')+'">'+(done(t)?'✓':abrev(t.q))+'</button></td>';
+        var rr=t&&!done(t)&&resumo(t);
+        if(t)linhas+='<td class="m"><button class="cel '+(done(t)?'c':'p')+'"'+(rr?' style="--p:'+prog(rr).p+'%"':'')+' data-cel="'+t.id+'" aria-label="'+ml+': '+num(t.q)+' críticas, '+brl(t.v)+', '+(done(t)?'concluída':'em aberto')+'">'+(done(t)?'✓':abrev(t.q))+'</button></td>';
         else if(m>=R.ini&&m<=R.fim)linhas+='<td class="m"><span class="cel l" role="img" data-mes="'+ml+'" aria-label="'+ml+': sem pendência"></span></td>';
         else linhas+='<td class="m"><span class="cel x" role="img" data-fora="'+ml+'" aria-label="'+ml+': fora do período analisado">–</span></td>';
       }
@@ -914,7 +950,7 @@ function tipDe(c){
   var t=T.filter(function(x){return x.id===id;})[0],r=resumo(t);
   var h='<b>'+esc(t.e)+'</b>Competência '+t.r+'<br>'+num(t.q)+(t.q===1?' crítica':' críticas')+' · '+brl(t.v)+'<br>';
   h+=done(t)?'Concluída'+(S[id].at?' · '+quem(S[id]):''):(late(t)?'Atrasada':'Em aberto')+' · prevista para '+fdata(t.d)+' ('+esc(t.w)+')';
-  if(r){var av=r[1]+r[2]+r[3]+r[4]+r[5];h+='<br>'+num(av)+' de '+num(av+r[0])+' críticas avaliadas';}
+  if(r){var av=r[1]+r[2]+r[3]+r[4]+r[5];h+='<br>'+num(av)+' de '+num(av+r[0])+' críticas avaliadas ('+prog(r).p+'%)';}
   var cf=CONF[id];
   if(cf)h+='<br>SPED: '+cfRes(cf.n);
   return h;
@@ -1015,6 +1051,8 @@ document.addEventListener('click',function(e){
   if(e.target.id==='expj'){exportarJson();return;}
   if(e.target.id==='impj'){document.getElementById('fimp').click();return;}
   if(e.target.id==='impc'||e.target.closest('[data-cfimp]')){document.getElementById('fconf').click();return;}
+  var rp=e.target.closest('[data-rep]');
+  if(rp){replicar(rp.dataset.rep,+rp.dataset.i,rp.parentNode.querySelector('.obsn').value);return;}
   var ca=e.target.closest('[data-cfap]');
   if(ca){var fid=ca.dataset.cfap,fc=CONF[fid],fi=[];
     if(fc)fc.r.forEach(function(v,i){var s0=cst(fid,i).s|0;if(v[0]===ca.dataset.c&&(s0===0||s0===1||s0===5))fi.push(i);});
@@ -1032,6 +1070,8 @@ document.addEventListener('click',function(e){
     document.getElementById('crono').scrollIntoView({behavior:'smooth',block:'start'});return;}
   var d=e.target.closest('[data-det]');if(d){abrir(d);return;}
 });
+// O clique no "Replicar" não pode tirar o foco da anotação antes da hora: a lista é redesenhada ao sair do campo e o clique se perderia.
+document.addEventListener('mousedown',function(e){if(e.target.closest&&e.target.closest('[data-rep]'))e.preventDefault();});
 document.addEventListener('mouseover',function(e){
   var c=e.target.closest&&e.target.closest('#mapas .cel');
   if(c)tipMostra(c);else tipEl.classList.add('hide');
