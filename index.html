@@ -91,7 +91,7 @@ table.big td.n,table.big th.n{text-align:right;font-variant-numeric:tabular-nums
 .status.err{color:var(--late)}
 .empty{padding:26px;text-align:center;color:var(--muted)}
 footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted2)}
-.hide{display:none}
+.hide{display:none!important}
 .who{font-size:11px;color:var(--muted2);margin-top:3px}
 .acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0 0}
 .acoes select,.acoes button{padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);font:inherit;font-size:13px;cursor:pointer}
@@ -140,6 +140,13 @@ button.cel:hover{filter:brightness(1.12)}
 .leg .cel.c{font-size:13px}
 #tip{position:fixed;z-index:50;max-width:310px;padding:9px 12px;border-radius:9px;background:var(--fg);color:var(--bg);font-size:12px;line-height:1.5;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.28)}
 #tip b{display:block;font-size:12.5px}
+.cfbar{display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--accent-soft);border-bottom:1px solid var(--line);font-size:12px}
+.cf{grid-column:1/-1;font-size:11.5px;line-height:1.45;padding:5px 9px;border-radius:6px;background:var(--th);color:var(--muted)}
+.cf b{margin-right:5px}
+.cf.cR{box-shadow:inset 3px 0 0 var(--crit)}.cf.cR b{color:var(--late)}
+.cf.cN{box-shadow:inset 3px 0 0 var(--good)}.cf.cN b{color:var(--ok)}
+.cf.cI{box-shadow:inset 3px 0 0 #fab219}.cf.cI b{color:var(--warn)}
+.sc.cfc{background:var(--accent-soft);color:var(--accent)}
 @media(max-width:640px){.wrap{padding:16px 11px 70px}h1{font-size:20px}.tv{font-size:12px}.brandbar-in{padding:11px;gap:12px}.brand-logo{height:30px}.brand-proj{font-size:11.5px;padding-left:12px}table.mapa td.emp{min-width:150px;max-width:170px;font-size:12px}}
 </style>
 </head>
@@ -185,7 +192,7 @@ button.cel:hover{filter:brightness(1.12)}
 <section id="crono" class="hide">
  <div class="toolbar">
   <input id="q" type="search" placeholder="Buscar empresa, IE ou competência…">
-  <select id="fst"><option value="">Todas as situações</option><option value="p">Pendentes</option><option value="a">Atrasadas</option><option value="c">Concluídas</option><option value="h">Do dia</option><option value="s">Com críticas sem avaliação</option><option value="b">Com bug da SEFAZ</option></select>
+  <select id="fst"><option value="">Todas as situações</option><option value="p">Pendentes</option><option value="a">Atrasadas</option><option value="c">Concluídas</option><option value="h">Do dia</option><option value="s">Com críticas sem avaliação</option><option value="b">Com bug da SEFAZ</option><option value="f">Conferidas com o SPED</option><option value="r">Com crítica confirmada no SPED</option></select>
   <select id="fwk"><option value="">Todas as semanas</option></select>
  </div>
  <div class="chips" id="chips" style="margin-bottom:6px"></div>
@@ -193,8 +200,11 @@ button.cel:hover{filter:brightness(1.12)}
  <button id="exp">Exportar andamento (CSV)</button>
  <button id="expj">Exportar cópia (JSON)</button>
  <button id="impj">Importar cópia (JSON)</button>
- <input id="fimp" type="file" accept="application/json,.json" style="display:none"></div>
- <p class="note" id="prefmsg" style="margin-bottom:10px"></p>
+ <input id="fimp" type="file" accept="application/json,.json" style="display:none">
+ <button id="impc">Importar SPED / XML para conferência</button>
+ <input id="fconf" type="file" multiple accept=".txt,.xml,.zip" style="display:none"></div>
+ <p class="note" id="prefmsg"></p>
+ <p class="note" style="margin-bottom:10px">Conferência automática: importe o SPED Fiscal (.txt) da competência e, se tiver, os XML das notas (.xml ou .zip). O quadro cruza cada crítica com o que está escriturado. Os arquivos são lidos só neste navegador; nada é enviado para fora.</p>
  <div id="lista"></div>
 </section>
 
@@ -221,7 +231,7 @@ function resumo(t){
   for(var i=0;i<n.r.length;i++)r[cst(t.id,i).s|0]++;
   return r;
 }
-var HOJE=new Date().toISOString().slice(0,10);
+var HOJE=(function(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})(new Date());
 var brl=function(v){return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});};
 var brlc=function(v){return v>=1e6? 'R$ '+(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mi' : brl(v);};
 var num=function(v){return v.toLocaleString('pt-BR');};
@@ -400,6 +410,8 @@ function passa(t){
   if(s==='h'&&t.d!==HOJE)return false;
   if(s==='s'){var r1=resumo(t);if(!r1||!r1[0])return false;}
   if(s==='b'){var r2=resumo(t);if(!r2||!r2[4])return false;}
+  if(s==='f'&&!CONF[t.id])return false;
+  if(s==='r'&&!(CONF[t.id]&&CONF[t.id].n.R))return false;
   return true;
 }
 function linha(t){
@@ -420,6 +432,8 @@ function resumochips(t){
   var h='<div class="stchips">';
   if(r[0])h+='<span class="sc s0">'+r[0]+' sem avaliação</span>';
   for(var i=1;i<6;i++)if(r[i])h+='<span class="sc s'+i+'">'+r[i]+' '+esc(STN[i].toLowerCase())+'</span>';
+  var cf=CONF[t.id];
+  if(cf)h+='<span class="sc cfc">SPED: '+cfRes(cf.n)+'</span>';
   return h+'</div>';
 }
 function lista(){
@@ -460,6 +474,12 @@ function detalhe(t){
     h+='<div class="selbar'+(selc.length?'':' hide')+'" data-selbar="'+t.id+'"><span>'+selc.length+' crítica'+(selc.length===1?'':'s')+' selecionada'+(selc.length===1?'':'s')+'</span>'+
       '<span>Marcar como:</span>'+[1,2,3,4,5].map(function(s){return '<button class="bt" data-selap="'+t.id+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+
       '<button class="bt" data-selclr="'+t.id+'">Limpar seleção</button></div>';
+    var cf=CONF[t.id];
+    if(cf)h+='<div class="cfbar"><span><b>Conferência com o SPED '+(cf.arq.cab.fin==='1'?'retificador':'original')+' de '+t.r+':</b> '+cfRes(cf.n)+'</span>'+
+      (cf.n.R?'<button class="bt" data-cfap="'+t.id+'" data-c="R" data-s="1">Marcar confirmadas como “A corrigir”</button>':'')+
+      (cf.n.N?'<button class="bt" data-cfap="'+t.id+'" data-c="N" data-s="2">Marcar não confirmadas como “Corrigida”</button><button class="bt" data-cfap="'+t.id+'" data-c="N" data-s="4">ou como “Bug da SEFAZ”</button>':'')+
+      (cf.n.I?'<button class="bt" data-cfsel="'+t.id+'">Selecionar inconclusivas</button>':'')+'</div>';
+    else h+='<div class="cfbar"><span>Sem conferência automática: o SPED de '+t.r+' desta empresa ainda não foi importado.</span><button class="bt" data-cfimp="1">Importar SPED / XML</button></div>';
     var por={};n.r.forEach(function(r,i){(por[r[0]]=por[r[0]]||[]).push(i);});
     var mostrados=0,cortou=false;
     Object.keys(por).forEach(function(g){
@@ -476,6 +496,7 @@ function detalhe(t){
           '<small>'+(r[4]?esc(r[4])+' · ':'')+'chave '+esc(r[3])+'</small></div>'+
           '<div class="vl">'+brl(r[2])+'<br>'+selHtml(t.id,i,st.s)+'</div>'+
           (st.s?'<input class="obsn" data-obsn="'+t.id+'" data-i="'+i+'" placeholder="Anotação (protocolo, motivo, nº do chamado…)" value="'+esc(st.o||'')+'">':'')+
+          (cf?'<div class="cf c'+cf.r[i][0]+'"><b>'+CFN[cf.r[i][0]]+'</b>'+esc(cf.r[i][1])+'</div>':'')+
           '</div>';
       });
     });
@@ -510,6 +531,192 @@ function tipos(){
   var h='<thead><tr><th>Tipo de crítica</th><th>Operação</th><th class="n">Competências</th><th class="n">Críticas</th><th class="n">Valor</th><th class="n">Já concluído</th></tr></thead><tbody>';
   L.forEach(function(p){h+='<tr><td>'+esc(p.t)+'</td><td>'+esc(p.o||'—')+'</td><td class="n">'+p.n+'</td><td class="n">'+num(p.q)+'</td><td class="n">'+brl(p.v)+'</td><td class="n">'+brl(p.vc)+'</td></tr>';});
   document.getElementById('ttipos').innerHTML=h+'</tbody>';
+}
+
+/* ---------- conferência com o SPED ---------- */
+/* Cada crítica é cruzada com o C100 da mesma chave no SPED da competência (e, se houver, com o XML da nota).
+   O resultado diz só se o fato apontado pela SEFAZ aparece no arquivo: R confirmada, N não confirmada, I inconclusiva.
+   Nada é gravado: os arquivos ficam na memória e somem ao recarregar a página. */
+var SPEDS={},XMLS={},CONF={};
+var CFN={R:'Confirmada',N:'Não confirmada',I:'Inconclusiva'};
+var SIT={'00':'regular','01':'regular extemporâneo','02':'cancelado','03':'cancelado extemporâneo','04':'denegado','05':'inutilizado','06':'complementar','07':'complementar extemporâneo','08':'regime especial'};
+function nsp(s){s=String(s==null?'':s).trim();if(!s)return 0;if(s.indexOf(',')>=0)s=s.replace(/\./g,'').replace(',','.');return parseFloat(s)||0;}
+function dsp(d){return /^\d{8}$/.test(d||'')?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):'sem data';}
+function arr2(v){return Math.round(v*100)/100;}
+function cfRes(n){return n.R+(n.R===1?' confirmada':' confirmadas')+' · '+n.N+(n.N===1?' não confirmada':' não confirmadas')+' · '+n.I+(n.I===1?' inconclusiva':' inconclusivas');}
+function dvOk(ch){var s=0,p=2;for(var i=42;i>=0;i--){s+=(+ch.charAt(i))*p;p=p===9?2:p+1;}var r=s%11;return (r<2?0:11-r)===+ch.charAt(43);}
+function lerSped(txt){
+  var cab=null,part={},idx={},nota=null,n=0,p=txt.charCodeAt(0)===0xFEFF?1:0,q,ln,f,reg;
+  while(p<txt.length){
+    q=txt.indexOf('\n',p);if(q<0)q=txt.length;
+    ln=txt.substring(p,q);p=q+1;
+    if(ln.charCodeAt(0)!==124)continue;
+    reg=ln.substr(1,4);
+    if(reg==='C190'){
+      if(nota){f=ln.split('|');nota.so+=nsp(f[5]);if(f[3]&&nota.cf.indexOf(f[3])<0)nota.cf.push(f[3]);}
+    }else if(reg==='C100'){
+      f=ln.split('|');n++;
+      nota={op:f[2],em:f[3],pa:f[4],sit:f[6],ser:f[7],num:f[8],ch:(f[9]||'').replace(/\D/g,''),dd:f[10],de:f[11],vd:nsp(f[12]),vi:nsp(f[22]),so:0,cf:[]};
+      if(nota.ch.length===44)(idx[nota.ch]=idx[nota.ch]||[]).push(nota);
+    }else if(reg==='0150'){
+      f=ln.split('|');part[f[2]]=(f[5]||f[6]||'').replace(/\D/g,'');
+    }else if(reg==='0000'&&!cab){
+      f=ln.split('|');cab={fin:f[3],ini:f[4]||'',nome:f[6]||'',cnpj:(f[7]||'').replace(/\D/g,''),ie:(f[10]||'').replace(/\D/g,'').replace(/^0+/,'')};
+    }
+  }
+  if(!cab||cab.ini.length!==8)return null;
+  return {cab:cab,ie:cab.ie,per:cab.ini.slice(2),idx:idx,part:part,n:n};
+}
+function guardarSped(s){
+  var E=SPEDS[s.ie]=SPEDS[s.ie]||{},a=E[s.per];
+  if(a&&a.cab.fin==='1'&&s.cab.fin!=='1')return;
+  E[s.per]=s;
+}
+function tg(x,n){var m=new RegExp('<(?:\\w+:)?'+n+'(?:\\s[^>]*)?>([^<]*)<').exec(x);return m?m[1].trim():'';}
+function bl(x,n){var m=new RegExp('<(?:\\w+:)?'+n+'[\\s>][\\s\\S]*?</(?:\\w+:)?'+n+'>').exec(x);return m?m[0]:'';}
+function lerXml(x){
+  var ok=false,m=/<(?:\w+:)?infNFe[^>]*\bId\s*=\s*["']NFe(\d{44})["']/.exec(x);
+  if(m){
+    var ide=bl(x,'ide'),em=bl(x,'emit'),de=bl(x,'dest'),tot=bl(x,'ICMSTot'),o=XMLS[m[1]]=XMLS[m[1]]||{};
+    o.tp=tg(ide,'tpNF');o.ce=tg(em,'CNPJ')||tg(em,'CPF');o.cd=tg(de,'CNPJ')||tg(de,'CPF');
+    o.vn=parseFloat(tg(tot,'vNF'))||0;o.vi=parseFloat(tg(tot,'vICMS'))||0;
+    if(tg(bl(x,'protNFe'),'cStat')==='101')o.canc=true;
+    ok=true;
+  }
+  var ev=/<(?:\w+:)?tpEvento>11011[12]</.test(x),ce=tg(x,'chNFe');
+  if(ev&&ce.length===44){(XMLS[ce]=XMLS[ce]||{}).canc=true;ok=true;}
+  return ok;
+}
+function conferirNota(tipo,r,S0,E,per){
+  var ch=r[3],val=r[2],L=S0.idx[ch]||[],c=L[0],X=XMLS[ch],P=per.slice(0,2)+'/'+per.slice(2),emp=S0.cab.cnpj,fora=[],base,d;
+  var nf=X&&X.vn!=null,canc=!!r[5]||!!(X&&X.canc);
+  Object.keys(E).forEach(function(k){if(k!==per&&E[k].idx[ch])fora.push(k.slice(0,2)+'/'+k.slice(2));});
+  if(/não escriturada/i.test(tipo)){
+    if(c)return ['N','Consta no SPED de '+P+': C100 nº '+c.num+', '+brl(c.vd)+', '+(SIT[c.sit]||'situação '+c.sit)+', '+(c.op==='0'?'entrada':'saída')+' em '+dsp(c.op==='0'?c.de:c.dd)+'.'];
+    if(fora.length)return ['I','Não consta no SPED de '+P+', mas está escriturada no SPED de '+fora.join(', ')+'.'];
+    return ['R','Não consta em nenhum C100 do SPED de '+P+'.'+(canc?' A nota está cancelada.':'')];
+  }
+  if(/duplicada/i.test(tipo)){
+    if(L.length>1)return ['R','A chave aparece '+L.length+' vezes no SPED de '+P+' (C100 nº '+c.num+').'];
+    if(c&&fora.length)return ['R','Escriturada no SPED de '+P+' e também no de '+fora.join(', ')+'.'];
+    if(c)return ['I','Aparece uma só vez no SPED de '+P+'. A outra escrituração pode estar em um mês que não foi importado.'];
+  }
+  if(!c){
+    if(/sem NFE correspondente|outro contribuinte/i.test(tipo))return ['N','O documento não consta mais no SPED de '+P+'.'];
+    return ['I','A nota não consta no SPED de '+P+(fora.length?' (está no de '+fora.join(', ')+')':'')+'. Confira se o arquivo importado é o que foi transmitido.'];
+  }
+  if(/status/i.test(tipo)){
+    var cs=c.sit==='02'||c.sit==='03';
+    base='SPED: documento '+(SIT[c.sit]||c.sit)+' (COD_SIT '+c.sit+'). ';
+    if(canc)return cs?['N',base+'A nota está cancelada e o SPED já informa o cancelamento.']:['R',base+'A nota está cancelada'+(X&&X.canc?' (evento no XML).':' na SEFAZ.')];
+    if(cs||c.sit==='04'||c.sit==='05')return ['R',base+'A nota não consta como cancelada na SEFAZ.'];
+    return ['I',base+'A nota não vem marcada como cancelada. Consulte a situação dela no portal da NF-e.'];
+  }
+  if(/tipo de opera/i.test(tipo)){
+    base='SPED: escriturada como '+(c.op==='0'?'entrada':'saída')+', emissão '+(c.em==='0'?'própria':'de terceiros')+'. ';
+    if(nf&&X.tp){
+      var esp=X.ce===emp?X.tp:(X.tp==='1'?'0':'1'),desc='nota de '+(X.tp==='1'?'saída':'entrada')+' emitida por '+(X.ce===emp?'esta empresa':'terceiro');
+      return esp===c.op?['N',base+'Confere com o XML ('+desc+').']:['R',base+'Pelo XML deveria ser '+(esp==='0'?'entrada':'saída')+' ('+desc+').'];
+    }
+    return ['I',base+'Importe o XML da nota para comparar com o tipo de operação.'];
+  }
+  if(/mês divergente/i.test(tipo)){
+    var emi=ch.substr(4,2)+'/20'+ch.substr(2,2);
+    base='Emitida em '+emi+' e escriturada no SPED de '+P+' (documento de '+dsp(c.dd)+(c.de?', '+(c.op==='0'?'entrada':'saída')+' em '+dsp(c.de):'')+'). ';
+    if(emi===P)return ['N',base+'O mês da escrituração é o mesmo da emissão.'];
+    return ['R',base+(c.op==='0'?'A entrada pode ser regular se a mercadoria chegou nesse mês.':'Saída escriturada fora do mês de emissão.')];
+  }
+  if(/ICMS/.test(tipo)){
+    base='SPED: ICMS de '+brl(c.vi)+' no C100 nº '+c.num+(c.cf.length?' (CFOP '+c.cf.join(', ')+')':'')+'. ';
+    if(nf){
+      d=arr2(c.vi-X.vi);
+      if(Math.abs(d)<=0.02)return ['N',base+'Igual ao ICMS do XML.'];
+      return ['R',base+'XML: '+brl(X.vi)+'. '+(c.op==='0'?'Crédito':'Débito')+' escriturado '+(d>0?'maior':'menor')+' que o da nota em '+brl(Math.abs(d))+'.'];
+    }
+    if(c.vi===0)return ['I',base+'Pela diferença apontada, a nota destaca '+brl(val)+' de ICMS'+(c.op==='0'?' e o crédito não foi aproveitado':'')+'. Importe o XML para confirmar.'];
+    if(Math.abs(c.vi-val)<=0.02)return ['I',base+'A diferença apontada é igual ao ICMS escriturado, sinal de que a nota não destaca ICMS. Importe o XML para confirmar.'];
+    return ['I',base+'Diferença apontada: '+brl(val)+'. Importe o XML para ver o ICMS da nota.'];
+  }
+  if(/valor diferente da nota/i.test(tipo)){
+    base='SPED: valor do documento '+brl(c.vd)+' no C100 nº '+c.num+'. ';
+    if(nf){
+      d=arr2(c.vd-X.vn);
+      return Math.abs(d)<=0.02?['N',base+'Igual ao valor do XML.']:['R',base+'XML: '+brl(X.vn)+' (diferença de '+brl(Math.abs(d))+').'];
+    }
+    d=Math.abs(arr2(c.vd-c.so));
+    if(val>0.02&&Math.abs(d-val)<=0.02)return ['R',base+'A soma dos C190 é '+brl(arr2(c.so))+': diferença de '+brl(d)+', a mesma apontada pela SEFAZ.'];
+    return ['I',base+'Diferença apontada: '+brl(val)+'. Importe o XML para comparar com o valor da nota.'];
+  }
+  if(/sem NFE correspondente/i.test(tipo)){
+    var pc=S0.part[c.pa]||'',cc=ch.substr(6,14);
+    base='SPED: C100 nº '+c.num+', série '+c.ser+', '+brl(c.vd)+'. ';
+    if(nf)return ['N',base+'O XML dessa chave foi importado: a nota existe.'];
+    if(!dvOk(ch))return ['R',base+'O dígito verificador da chave está errado: a chave foi digitada incorretamente.'];
+    if(+ch.substr(25,9)!==+c.num)return ['R',base+'O número dentro da chave ('+(+ch.substr(25,9))+') é diferente do número escriturado.'];
+    if(c.em==='0'?cc!==emp:(pc.length===14&&pc!==cc))return ['R',base+'O CNPJ dentro da chave ('+cc+') é diferente do '+(c.em==='0'?'CNPJ da empresa':'CNPJ do participante')+'.'];
+    return ['I',base+'A chave é válida e coerente com o registro. Consulte a chave no portal da NF-e.'];
+  }
+  if(/outro contribuinte/i.test(tipo)){
+    base='SPED: C100 nº '+c.num+', '+(c.op==='0'?'entrada':'saída')+'. ';
+    if(nf&&X.ce){
+      if(X.ce===emp||X.cd===emp)return ['N',base+'No XML, esta empresa é '+(X.ce===emp?'a emitente':'a destinatária')+'.'];
+      return ['R',base+'No XML, o emitente é '+X.ce+' e o destinatário é '+(X.cd||'não informado')+': nenhum dos dois é esta empresa.'];
+    }
+    return ['I',base+'Importe o XML para ver o emitente e o destinatário.'];
+  }
+  return ['I','Tipo de crítica sem regra de conferência automática.'];
+}
+function conferirTudo(){
+  CONF={};
+  T.forEach(function(t){
+    var n=NT[t.id],k=t.id.split('-'),E=SPEDS[k[0].replace(/^0+/,'')],S0=E&&E[k[1]];
+    if(!n||!S0)return;
+    var o={arq:S0,r:[],n:{R:0,N:0,I:0}};
+    n.r.forEach(function(r,i){var v=conferirNota(n.t[r[0]][0],r,S0,E,k[1]);o.r[i]=v;o.n[v[0]]++;});
+    CONF[t.id]=o;
+  });
+}
+function decod(u8){try{return new TextDecoder('utf-8',{fatal:true}).decode(u8);}catch(e){return new TextDecoder('windows-1252').decode(u8);}}
+async function lerZip(buf,cada){
+  var dv=new DataView(buf),i=buf.byteLength-22;
+  while(i>=0&&dv.getUint32(i,true)!==0x06054b50)i--;
+  if(i<0)throw new Error('zip');
+  var tot=dv.getUint16(i+10,true),p=dv.getUint32(i+16,true);
+  for(var k=0;k<tot&&dv.getUint32(p,true)===0x02014b50;k++){
+    var met=dv.getUint16(p+10,true),csz=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),off=dv.getUint32(p+42,true);
+    var nome=new TextDecoder().decode(new Uint8Array(buf,p+46,nl));
+    p+=46+nl+dv.getUint16(p+30,true)+dv.getUint16(p+32,true);
+    if(!/\.(xml|txt)$/i.test(nome)||(met!==0&&met!==8))continue;
+    var u8=new Uint8Array(buf,off+30+dv.getUint16(off+26,true)+dv.getUint16(off+28,true),csz);
+    if(met===8)u8=new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+    cada(u8);
+  }
+}
+async function importarConf(files){
+  var ns=0,nx=0,ign=0,fora=0,semdet=0;
+  function um(u8){
+    var x=decod(u8),s;
+    if(x.slice(0,8).indexOf('|0000|')>=0){
+      s=lerSped(x);if(!s){ign++;return;}
+      guardarSped(s);ns++;
+      var t=T.filter(function(y){var k=y.id.split('-');return k[0].replace(/^0+/,'')===s.ie&&k[1]===s.per;})[0];
+      if(!t)fora++;else if(!NT[t.id])semdet++;
+    }else if(lerXml(x))nx++;else ign++;
+  }
+  for(var i=0;i<files.length;i++){
+    if(i%25===0)stmsg('Lendo arquivos para a conferência… '+i+' de '+files.length);
+    try{
+      var buf=await files[i].arrayBuffer();
+      if(/\.zip$/i.test(files[i].name))await lerZip(buf,um);else um(new Uint8Array(buf));
+    }catch(e){ign++;}
+  }
+  conferirTudo();
+  var ids=Object.keys(CONF),tt={R:0,N:0,I:0};
+  ids.forEach(function(id){tt.R+=CONF[id].n.R;tt.N+=CONF[id].n.N;tt.I+=CONF[id].n.I;});
+  if(ids.length){filtro.st='f';document.getElementById('fst').value='f';}
+  render();
+  stmsg('Conferência: '+ns+' SPED e '+nx+' XML lidos. '+(ids.length?num(tt.R+tt.N+tt.I)+' críticas conferidas em '+ids.length+(ids.length===1?' competência: ':' competências: ')+num(tt.R)+' confirmadas, '+num(tt.N)+' não confirmadas e '+num(tt.I)+' inconclusivas.':'Nenhuma competência do quadro tem SPED importado: confira a inscrição estadual e o período do arquivo.')+
+    (fora?' '+fora+' SPED de empresa ou mês que não está no quadro.':'')+(semdet?' '+semdet+' SPED de competência sem detalhe nota a nota.':'')+(ign?' '+ign+(ign===1?' arquivo ignorado.':' arquivos ignorados.'):''),!ids.length);
 }
 
 /* ---------- consolidado ---------- */
@@ -562,6 +769,8 @@ function tipDe(c){
   var h='<b>'+esc(t.e)+'</b>Competência '+t.r+'<br>'+num(t.q)+(t.q===1?' crítica':' críticas')+' · '+brl(t.v)+'<br>';
   h+=done(t)?'Concluída'+(S[id].at?' · '+quem(S[id]):''):(late(t)?'Atrasada':'Em aberto')+' · prevista para '+fdata(t.d)+' ('+esc(t.w)+')';
   if(r){var av=r[1]+r[2]+r[3]+r[4]+r[5];h+='<br>'+num(av)+' de '+num(av+r[0])+' críticas avaliadas';}
+  var cf=CONF[id];
+  if(cf)h+='<br>SPED: '+cfRes(cf.n);
   return h;
 }
 function tipMostra(c){
@@ -607,13 +816,13 @@ async function sincronizar(){
 }
 async function exportar(){
   var dl=null;try{dl=window.claude&&await window.claude.use('downloads');}catch(e){}
-  var L=[['Colaborador','Data prevista','Periodo','Empresa','IE','Competencia','Valor','Concluida','Observacao da competencia','Tipo de critica','Operacao','NF','Valor da critica','CNPJ','Chave','Situacao da critica','Anotacao']];
+  var L=[['Colaborador','Data prevista','Periodo','Empresa','IE','Competencia','Valor','Concluida','Observacao da competencia','Tipo de critica','Operacao','NF','Valor da critica','CNPJ','Chave','Situacao da critica','Anotacao','Conferencia com o SPED','Evidencia da conferencia']];
   T.forEach(function(t){
-    var d=S[t.id]||{},n=NT[t.id];
+    var d=S[t.id]||{},n=NT[t.id],cf=CONF[t.id];
     var base=[t.w,t.d,t.p?'Tarde':'Manhã',t.e,t.ie,t.r,t.v.toFixed(2).replace('.',','),done(t)?'Sim':'Não',d.obs||''];
     if(n&&n.r.length){n.r.forEach(function(r,i){var st=cst(t.id,i);
-      L.push(base.concat([n.t[r[0]][0],n.t[r[0]][1],r[1],r[2].toFixed(2).replace('.',','),r[4],r[3],STN[st.s|0],st.o||'']));});}
-    else L.push(base.concat(['(sem detalhe por tipo)','','','','','','','']));
+      L.push(base.concat([n.t[r[0]][0],n.t[r[0]][1],r[1],r[2].toFixed(2).replace('.',','),r[4],r[3],STN[st.s|0],st.o||'',cf?CFN[cf.r[i][0]]:'',cf?cf.r[i][1]:'']));});}
+    else L.push(base.concat(['(sem detalhe por tipo)','','','','','','','','','']));
   });
   var csv='\ufeff'+L.map(function(r){return r.map(function(c){c=String(c==null?'':c);return '"'+c.replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
   if(!dl){baixar('andamento-malha-fina.csv',csv,'text/csv');stmsg('CSV gerado.');return;}
@@ -657,6 +866,15 @@ document.addEventListener('click',function(e){
   if(e.target.id==='exp'){exportar();return;}
   if(e.target.id==='expj'){exportarJson();return;}
   if(e.target.id==='impj'){document.getElementById('fimp').click();return;}
+  if(e.target.id==='impc'||e.target.closest('[data-cfimp]')){document.getElementById('fconf').click();return;}
+  var ca=e.target.closest('[data-cfap]');
+  if(ca){var fid=ca.dataset.cfap,fc=CONF[fid],fi=[];
+    if(fc)fc.r.forEach(function(v,i){var s0=cst(fid,i).s|0;if(v[0]===ca.dataset.c&&(s0===0||s0===1||s0===5))fi.push(i);});
+    if(fi.length)salvarLote(fid,fi,+ca.dataset.s);
+    stmsg(fi.length?num(fi.length)+(fi.length===1?' crítica marcada':' críticas marcadas')+' como “'+STN[+ca.dataset.s]+'”. As que já estavam corrigidas, sem correção ou como bug não foram alteradas.':'Nenhuma crítica em aberto nesse grupo: nada foi alterado.');return;}
+  var cs=e.target.closest('[data-cfsel]');
+  if(cs){var sid=cs.dataset.cfsel,sc=CONF[sid];
+    if(sc)sc.r.forEach(function(v,i){if(v[0]==='I')SEL[selKey(sid,i)]=1;});render();return;}
   var ce=e.target.closest('[data-cel]');
   if(ce){var tc=T.filter(function(x){return x.id===ce.dataset.cel;})[0];
     document.querySelector('.tab[data-t="crono"]').click();
@@ -678,6 +896,7 @@ document.addEventListener('focusout',function(e){
 });
 document.addEventListener('change',function(e){
   if(e.target.id==='fimp'&&e.target.files&&e.target.files[0]){importarJson(e.target.files[0]);e.target.value='';return;}
+  if(e.target.id==='fconf'&&e.target.files&&e.target.files.length){importarConf([].slice.call(e.target.files));e.target.value='';return;}
   if(e.target.dataset&&e.target.dataset.nsel!==undefined&&e.target.classList.contains('nsel')&&e.target.dataset.nsel){
     var id=e.target.dataset.nsel,i=+e.target.dataset.i;
     if(e.target.checked)SEL[selKey(id,i)]=1;else delete SEL[selKey(id,i)];render();return;}
