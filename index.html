@@ -373,6 +373,24 @@ function fimDe(d){
 function dloc(s){var d=new Date(s);return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
 // Fora do prazo: concluída em dia posterior ao previsto. No mesmo dia conta como no prazo.
 function foraPrazo(t){var f=fimDe(S[t.id]);return !!f&&dloc(f)>t.d;}
+// Data ajustada pelo administrador: mostra só o dia, porque a hora não foi registrada pelo servidor.
+function fimTxt(d){var f=fimDe(d);return !f?'':d.ajustePor?f.toLocaleDateString('pt-BR')+' (data ajustada)':dhora(f);}
+function ajusteTxt(d){return d&&d.ajustePor?'Data ajustada por '+esc(NOMES[d.ajustePor]||d.ajustePor.split('@')[0])+(d.ajusteMotivo?': '+esc(d.ajusteMotivo):''):'';}
+/* Só administrador: corrige o dia da conclusão de quem fez no prazo e não marcou. O banco exige o perfil, o motivo e grava quem ajustou. */
+async function ajustarData(id){
+  var t=T.filter(function(x){return x.id===id;})[0],f=fimDe(S[id]);
+  var v=prompt('Dia em que a competência foi concluída de fato (DD/MM/AAAA):',(f||dt(t.d)).toLocaleDateString('pt-BR'));
+  if(v===null)return;
+  var m=/^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/.exec(v),d=m&&new Date(+m[3],+m[2]-1,+m[1]);
+  if(!d||d.getMonth()!==+m[2]-1||d.getDate()!==+m[1]){stmsg('Data inválida: use o formato DD/MM/AAAA.',true);return;}
+  if(dloc(d)>HOJE){stmsg('A data da conclusão não pode ser futura.',true);return;}
+  var mot=(prompt('Motivo do ajuste (fica registrado com o seu nome):','')||'').trim();
+  if(!mot){stmsg('Ajuste cancelado: o motivo é obrigatório.',true);return;}
+  try{
+    await db.doc('status/'+id).update({fim:db.hora(d),ajustePor:uid,ajusteEm:db.agora(),ajusteMotivo:mot.slice(0,300),by:uid,at:new Date().toISOString()});
+    stmsg('Data da conclusão ajustada para '+d.toLocaleDateString('pt-BR')+'. O ajuste fica registrado com o seu nome e o motivo.');
+  }catch(e){stmsg('Não foi possível ajustar a data ('+e.code+').',true);}
+}
 var REM={};
 function gravarStatus(k){
   var d=S[k]||{},r=REM[k]||{},o={done:!!d.done,obs:d.obs||'',by:uid||'',at:new Date().toISOString()};
@@ -425,9 +443,9 @@ function mostrarEU(){
 /* Fora do Claude, o quadro grava no Firestore do projeto controle-tare-azuos, nas coleções malha_*.
    O login é o mesmo do Controle TARE. Esta configuração não é segredo: quem protege são as regras do banco. */
 var FBC={apiKey:'AIzaSyDUC5Xw2lyrZmAkayApbaN5MfArHfsX5uU',authDomain:'controle-tare-azuos.firebaseapp.com',projectId:'controle-tare-azuos',appId:'1:752740297475:web:dab1cde392170be71c9736'};
-var FBURL='https://www.gstatic.com/firebasejs/12.17.1/',FB=null;
+var FBURL='https://www.gstatic.com/firebasejs/12.17.1/',FB=null,ADM=false;
 var ERRO={'auth/invalid-email':'E-mail inválido.','auth/user-disabled':'Este usuário foi desativado.','auth/user-not-found':'Nome de usuário ou senha incorretos.','auth/wrong-password':'Nome de usuário ou senha incorretos.','auth/invalid-credential':'Nome de usuário ou senha incorretos.','auth/too-many-requests':'Muitas tentativas. Aguarde alguns minutos.','auth/network-request-failed':'Sem conexão com a internet.'};
-function fbErr(e){return e&&e.code==='permission-denied'?{code:'seu usuário não tem acesso liberado; fale com o administrador'}:e;}
+function fbErr(e){return e&&e.code==='permission-denied'?{code:'o banco recusou a gravação; recarregue a página com Ctrl+F5 e, se continuar, fale com o administrador'}:e;}
 function slug(t){return (t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim().replace(/[^a-z0-9._\- ]/g,'').replace(/\s+/g,'.').replace(/\.{2,}/g,'.').replace(/^[.\-_]+|[.\-_]+$/g,'');}
 async function emailDe(t){
   t=(t||'').trim();
@@ -485,12 +503,15 @@ async function conectarEquipe(){
       set:function(v){return s.setDoc(r,v).catch(function(e){throw fbErr(e);});},
       update:function(v){return s.setDoc(r,v,{merge:true}).catch(function(e){throw fbErr(e);});}};},
     agora:function(){return s.serverTimestamp();},
+    hora:function(d){return s.Timestamp.fromDate(d);},
     collection:function(n){return {onSnapshot:function(ok,err){return s.onSnapshot(s.collection(fdb,'malha_'+n),ok,err);}};}};
   uid=mail;
   U={id:function(){return Promise.resolve(mail);},can:function(){return Promise.resolve(true);},
     profiles:async function(ids){var o={};for(var i=0;i<ids.length;i++)o[ids[i]]={name:await perfil(ids[i])};return o;}};
-  nome=await perfil(mail);
-  document.getElementById('quem').innerHTML='<div class="uinfo"><b>'+esc(nome)+'</b><span class="nuv">dados na nuvem</span></div><button class="tabx" id="sair"><span class="ic">🚪</span><span class="tx">Sair</span></button>';
+  var meu=null;try{meu=await s.getDoc(s.doc(fdb,'usuarios',mail));}catch(e){}
+  ADM=!!(meu&&meu.exists()&&meu.data().perfil==='admin');
+  nome=meu&&meu.exists()&&meu.data().nome||mail.split('@')[0];
+  document.getElementById('quem').innerHTML='<div class="uinfo"><b>'+esc(nome)+'</b><span class="nuv">dados na nuvem'+(ADM?' · administrador':'')+'</span></div><button class="tabx" id="sair"><span class="ic">🚪</span><span class="tx">Sair</span></button>';
 }
 /* Marcações feitas neste aparelho antes do login sobem uma vez para a equipe; o que já existe lá não é sobrescrito por algo mais antigo. */
 async function subirLocal(){
@@ -703,7 +724,8 @@ function linha(t){
    '<input type="checkbox" class="cbx" '+(done(t)?'checked':'')+' aria-label="Concluir">'+
    '<div class="ti"><div class="tn">'+esc(t.e)+'</div>'+
    '<div class="tm"><span>IE '+t.ie+'</span><span>'+esc(t.mu||'')+'</span><span>Competência <b>'+t.r+'</b></span><span class="when">'+fdata(t.d)+' · '+(t.p?'tarde':'manhã')+'</span><span>'+esc(t.w)+'</span>'+tags+'</div>'+
-   (S[t.id]&&S[t.id].at?'<div class="who">'+(fimDe(S[t.id])?'concluída em '+dhora(fimDe(S[t.id]))+' · ':'')+quem(S[t.id])+'</div>':'')+
+   (S[t.id]&&S[t.id].at?'<div class="who">'+(fimDe(S[t.id])?'concluída em '+fimTxt(S[t.id])+' · ':'')+quem(S[t.id])+(S[t.id].ajustePor?' · '+ajusteTxt(S[t.id]):'')+'</div>':'')+
+   (ADM&&done(t)&&db&&db.fb?'<button class="lnk" data-ajd="'+t.id+'" style="margin-right:14px">Ajustar data da conclusão</button>':'')+
    resumochips(t)+progHtml(t)+
    '<button class="lnk" data-det="'+t.id+'">'+(NT[t.id]?'Avaliar críticas':'Ver críticas')+' ('+num(t.q)+')</button>'+
    '<div class="detwrap"></div></div>'+
@@ -1065,7 +1087,8 @@ function tipDe(c){
   var h='<b>'+esc(t.e)+'</b>Competência '+t.r+'<br>'+num(t.q)+(t.q===1?' crítica':' críticas')+' · '+brl(t.v)+'<br>';
   var f=fimDe(S[id]),qf=S[id]&&NOMES[S[id].fimPor||S[id].by];
   if(done(t)){
-    h+='Concluída'+(f?' em '+dhora(f):'')+(qf?' por '+esc(qf):'');
+    h+='Concluída'+(f?' em '+fimTxt(S[id]):'')+(qf?' por '+esc(qf):'');
+    if(S[id].ajustePor)h+='<br>'+ajusteTxt(S[id]);
     if(foraPrazo(t))h+='<br>Fora do prazo: '+pl(ndias(t.d,dloc(f)),'dia depois','dias depois')+' do previsto ('+fdata(t.d)+')';
   }else h+=(late(t)?'Atrasada há '+pl(ndias(t.d,HOJE),'dia','dias'):'Em aberto')+' · prevista para '+fdata(t.d)+' ('+esc(t.w)+')';
   if(r){var g=prog(r);h+='<br>'+num(g.av)+' de '+num(g.tot)+' críticas avaliadas ('+g.p+'%)';}
@@ -1139,7 +1162,7 @@ function ndias(a,b){return Math.round((dt(b)-dt(a))/864e5);}
 function pl(n,um,varios){return num(n)+' '+(n===1?um:varios);}
 function dhora(s){var d=new Date(s);return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
 function aval(t){var r=resumo(t);if(!r)return '—';r=prog(r);return num(r.av)+' de '+num(r.tot)+' · '+r.p+'%';}
-function situacao(t){var f=fimDe(S[t.id]);return done(t)?'Concluída'+(f?' em '+dhora(f):'')+(foraPrazo(t)?' (fora do prazo)':''):late(t)?'Atrasada há '+pl(ndias(t.d,HOJE),'dia','dias'):'Em aberto';}
+function situacao(t){var f=fimDe(S[t.id]);return done(t)?'Concluída'+(f?' em '+fimTxt(S[t.id]):'')+(foraPrazo(t)?' (fora do prazo)':''):late(t)?'Atrasada há '+pl(ndias(t.d,HOJE),'dia','dias'):'Em aberto';}
 function relatorio(k,w,sem){
   var ts=T.filter(function(t){return (!w||t.w===w)&&(!sem||t.sem===sem);}),tit,cab,lin,vt=0;
   var CB=['Empresa','IE','Competência','Responsável','Data prevista'];
@@ -1149,7 +1172,7 @@ function relatorio(k,w,sem){
     tit=k==='v'?'Valor já resolvido':'Pendências concluídas';
     cab=CB.concat(['Concluída em','Prazo','Concluída por','Valor']);
     lin=ts.map(function(t){var d=S[t.id],f=fimDe(d),n=f?ndias(t.d,dloc(f)):0;
-      return base(t).concat([f?dhora(f):'—',!f?'—':n<0?pl(-n,'dia antes','dias antes'):n>0?'fora do prazo: '+pl(n,'dia depois','dias depois'):'no dia previsto',NOMES[d.fimPor||d.by]||'—',brl(t.v)]);});
+      return base(t).concat([f?fimTxt(d):'—',!f?'—':n<0?pl(-n,'dia antes','dias antes'):n>0?'fora do prazo: '+pl(n,'dia depois','dias depois'):'no dia previsto',NOMES[d.fimPor||d.by]||'—',brl(t.v)]);});
   }else if(k==='a'){
     ts=ts.filter(late).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:b.v-a.v;});
     tit='Atrasadas';cab=CB.concat(['Tempo em atraso','Críticas avaliadas','Valor']);
@@ -1246,6 +1269,8 @@ document.addEventListener('click',function(e){
   if(e.target.id==='expj'){exportarJson();return;}
   if(e.target.id==='impj'){document.getElementById('fimp').click();return;}
   if(e.target.id==='impc'||e.target.closest('[data-cfimp]')){document.getElementById('fconf').click();return;}
+  var aj=e.target.closest('[data-ajd]');
+  if(aj){ajustarData(aj.dataset.ajd);return;}
   var rp=e.target.closest('[data-rep]');
   if(rp){replicar(rp.dataset.rep,+rp.dataset.i,rp.parentNode.querySelector('.obsn').value);return;}
   var ca=e.target.closest('[data-cfap]');
