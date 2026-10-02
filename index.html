@@ -159,7 +159,8 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-si
 .gtg{display:flex;align-items:baseline;gap:4px 8px;flex:1 1 300px;min-width:0;flex-wrap:wrap;border:0;background:none;padding:2px 0;font:inherit;color:inherit;text-align:left;cursor:pointer}
 .gtg i{flex:none;width:11px;font-style:normal;font-size:11px;color:var(--accent)}
 .gtg:hover b,.tn[data-tog]:hover{text-decoration:underline;text-decoration-color:var(--accent)}
-.tn[data-tog]{cursor:pointer}
+.t[data-id]{cursor:pointer}
+.detwrap{cursor:auto}
 .grp .bulk{display:flex;gap:5px;flex-wrap:wrap}
 .bt{font-size:10.5px;padding:3px 8px;border:1px solid var(--line);background:var(--card);border-radius:14px;cursor:pointer;color:var(--fg)}
 .bt:hover{background:var(--hover)}
@@ -1496,6 +1497,11 @@ document.addEventListener('click',function(e){
   var rl=e.target.closest('[data-rel]');
   if(rl){relatorio(rl.dataset.rel,rl.dataset.w||'',rl.dataset.sem||'');return;}
   var d=e.target.closest('[data-det]');if(d){abrir(d);return;}
+  // Clique em qualquer ponto livre da linha da competência abre ou recolhe as críticas. Não vale dentro do painel aberto,
+  // em campos e botões, nem quando o clique terminou uma seleção de texto (para dar para copiar a IE ou o nome).
+  var lt=e.target.closest('.t[data-id]');
+  if(lt&&!e.target.closest('.detwrap,input,select,textarea,button,a,label')&&!String(window.getSelection()).trim()){
+    var lb=lt.querySelector('[data-det]');if(lb)abrir(lb);}
 });
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape')document.getElementById('rel').classList.add('hide');
