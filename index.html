@@ -749,6 +749,13 @@ function conferirNota(tipo,r,S0,E,per){
     base='SPED: documento '+(SIT[c.sit]||c.sit)+' (COD_SIT '+c.sit+'). ';
     if(canc)return cs?['N',base+'A nota está cancelada e o SPED já informa o cancelamento.']:['R',base+'A nota está cancelada'+(X&&X.canc?' (evento no XML).':' na SEFAZ.')];
     if(cs||c.sit==='04'||c.sit==='05')return ['R',base+'A nota não consta como cancelada na SEFAZ.'];
+    // Nota de entrada emitida pela própria empresa (devolução de cliente, por exemplo): fica só nas entradas,
+    // e a SEFAZ aponta diferença por não achar a nota própria nas saídas. O emitente vem da chave.
+    if(ch.substr(6,14)===emp&&c.op==='0'){
+      if(X&&X.tp==='1')return ['R',base+'Nota de emissão própria escriturada como entrada, mas o XML mostra nota de saída.'];
+      if(c.em!=='0')return ['I',base+'A chave é de emissão própria, mas o C100 informa emissão de terceiros (IND_EMIT '+c.em+'). Confira o indicador do emitente.'];
+      return ['N',base+'Nota de entrada de emissão própria'+(X&&X.tp==='0'?' (confirmada no XML)':'')+', escriturada na entrada e não cancelada. Não há diferença de situação no SPED: a crítica vem de a nota própria não constar nas saídas.'];
+    }
     return ['I',base+'A nota não vem marcada como cancelada. Consulte a situação dela no portal da NF-e.'];
   }
   if(/tipo de opera/i.test(tipo)){
