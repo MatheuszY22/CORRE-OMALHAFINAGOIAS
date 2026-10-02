@@ -183,6 +183,10 @@ table.mapa td.n small{display:block;font-family:var(--f-body);font-size:11px;col
 .cel.p{background:var(--crit);cursor:pointer}
 .cel.c{background:var(--good);cursor:pointer;font-size:16px}
 .cel.c.f{background:var(--yellow);color:#113783}
+.ord{display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:0;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer}
+.ord span{font-size:9px;opacity:.4}
+.ord:hover,.ord.at{color:var(--accent)}
+.ord.at span{opacity:1}
 .cel.l{background:var(--clean)}
 .cel.x{border:1px dashed var(--line);color:var(--muted2);font-weight:400}
 button.cel:hover{filter:brightness(1.12)}
@@ -272,7 +276,7 @@ table.big tr[data-rel]:hover td,#relb tr[data-ir]:hover td{background:var(--hove
   <span><i class="cel x">–</i>Fora do período analisado</span>
  </div>
  <div id="mapas"></div>
- <p class="note">Passe o mouse sobre um mês para ver a quantidade de críticas e o valor. Clique para abrir a competência no cronograma.</p>
+ <p class="note">Passe o mouse sobre um mês para ver a quantidade de críticas e o valor. Clique para abrir a competência no cronograma. Clique no nome de um mês, em “Empresa” ou em “Em aberto” para ordenar; clicando de novo, a ordem inverte.</p>
 </section>
 
 <section id="crono" class="hide">
@@ -1078,6 +1082,14 @@ async function importarConf(files){
 /* ---------- consolidado ---------- */
 var MES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 var fmapa={q:'',w:'',s:''};
+// Ordem da tabela: 'e' empresa, 'v' valor em aberto, 1 a 12 o mês. Clicar de novo no mesmo cabeçalho inverte.
+var omapa={k:'e',d:1};
+// Peso do mês na ordenação: em aberto pesa pela quantidade de críticas; abaixo vêm concluída fora do prazo, concluída, sem pendência e fora do período.
+function pesoMes(t,dentro){return t?(done(t)?(foraPrazo(t)?-1:-2):t.q):dentro?-3:-4;}
+function thOrd(k,rot,cls){
+  var at=omapa.k===k;
+  return '<th'+(cls?' class="'+cls+'"':'')+(at?' aria-sort="'+(omapa.d>0?'ascending':'descending')+'"':'')+'><button class="ord'+(at?' at':'')+'" data-ord="'+k+'" title="Ordenar por '+rot+'">'+rot+'<span>'+(at?(omapa.d>0?'▲':'▼'):'↕')+'</span></button></th>';
+}
 function abrev(n){return n>=1e4?Math.round(n/1e3)+'k':n>=1e3?(n/1e3).toFixed(1).replace('.',',')+'k':String(n);}
 function mapa(){
   var por={},anos={};
@@ -1091,7 +1103,7 @@ function mapa(){
   var L=Object.keys(por).map(function(k){return por[k];}).sort(function(a,b){return a.e.localeCompare(b.e);});
   var h='';
   Object.keys(anos).sort().forEach(function(a){
-    var R=anos[a],linhas='',ne=0,np=0,nc=0,nf=0;
+    var R=anos[a],linhas='',ne=0,np=0,nc=0,nf=0,rows=[];
     L.forEach(function(p){
       var ts=[];for(var i=1;i<=12;i++)if(p.c[a+'-'+i])ts.push(p.c[a+'-'+i]);
       if(!ts.length)return;
@@ -1105,6 +1117,14 @@ function mapa(){
       nf+=ts.filter(foraPrazo).length;
       ne++;np+=ts.length;nc+=ts.length-ab.length;
       ab.forEach(function(t){va+=t.v;});
+      rows.push({p:p,ts:ts,ab:ab,va:va});
+    });
+    rows.sort(function(x,y){
+      var k=omapa.k,den=k>=R.ini&&k<=R.fim,c=k==='e'?0:k==='v'?x.va-y.va:pesoMes(x.p.c[a+'-'+k],den)-pesoMes(y.p.c[a+'-'+k],den);
+      return c*omapa.d||x.p.e.localeCompare(y.p.e)*(k==='e'?omapa.d:1);
+    });
+    rows.forEach(function(o){
+      var p=o.p,ts=o.ts,ab=o.ab,va=o.va;
       linhas+='<tr><td class="emp">'+esc(p.e)+'<div class="tm"><span>IE '+p.ie+'</span><span>'+esc(p.ws.join(', '))+'</span></div></td>';
       for(var m=1;m<=12;m++){
         var t=p.c[a+'-'+m],ml=MES[m-1]+'/'+a;
@@ -1116,7 +1136,7 @@ function mapa(){
       linhas+='<td class="n">'+(ab.length?brlc(va):'—')+'<small>'+(ts.length-ab.length)+' de '+ts.length+' concluídas</small></td></tr>';
     });
     h+='<div class="card"><div class="ch"><b class="ano">'+a+'</b><span class="meta">'+ne+(ne===1?' empresa':' empresas')+' · '+np+' meses com pendência · '+nc+' concluídos'+(nf?' ('+nf+' fora do prazo)':'')+' · malha de '+MES[R.ini-1]+' a '+MES[R.fim-1]+'</span></div>';
-    h+=linhas?'<div class="scroll"><table class="big mapa"><thead><tr><th>Empresa</th>'+MES.map(function(x){return '<th class="m">'+x+'</th>';}).join('')+'<th class="n">Em aberto</th></tr></thead><tbody>'+linhas+'</tbody></table></div></div>':'<div class="empty">Nenhuma empresa com esses filtros.</div></div>';
+    h+=linhas?'<div class="scroll"><table class="big mapa"><thead><tr>'+thOrd('e','Empresa','')+MES.map(function(x,i){return i+1>=R.ini&&i+1<=R.fim?thOrd(i+1,x,'m'):'<th class="m">'+x+'</th>';}).join('')+thOrd('v','Em aberto','n')+'</tr></thead><tbody>'+linhas+'</tbody></table></div></div>':'<div class="empty">Nenhuma empresa com esses filtros.</div></div>';
   });
   document.getElementById('mapas').innerHTML=h;
   tipEl.classList.add('hide');
@@ -1406,6 +1426,10 @@ document.addEventListener('click',function(e){
     if(sc&&sc.r)sc.r.forEach(function(v,i){if(v[0]==='I')SEL[selKey(sid,i)]=1;});render();return;}
   var ce=e.target.closest('[data-cel]');
   if(ce){irPara(ce.dataset.cel);return;}
+  var od=e.target.closest('[data-ord]');
+  if(od){var ok=od.dataset.ord;ok=ok==='e'||ok==='v'?ok:+ok;
+    if(omapa.k===ok)omapa.d=-omapa.d;else omapa={k:ok,d:ok==='e'?1:-1};
+    mapa();return;}
   if(e.target.id==='relx'||e.target.id==='rel'){document.getElementById('rel').classList.add('hide');return;}
   if(e.target.id==='relcsv'){relCsv();return;}
   var ir=e.target.closest('[data-ir]');
