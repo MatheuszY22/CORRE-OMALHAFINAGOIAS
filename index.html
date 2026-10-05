@@ -188,7 +188,7 @@ button.cel:hover{filter:brightness(1.12)}
 .sc.cfc{background:var(--accent-soft);color:var(--accent)}
 .atv{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap}
 .atv::before{content:'';flex:none;width:8px;height:8px;border-radius:50%;background:currentColor}
-.atv.on{color:var(--ok)}.atv.re{color:var(--warn)}.atv.off{color:var(--muted2)}.atv.x{color:var(--late)}
+.atv.on{color:var(--ok)}.atv.on2{color:var(--accent)}.atv.re{color:var(--warn)}.atv.off{color:var(--muted2)}.atv.x{color:var(--late)}
 .pg{display:flex;align-items:center;gap:9px;margin:7px 0 1px;font-size:11.5px;color:var(--muted)}
 .pg .bar{flex:0 1 190px;margin:0}
 button.kpi{display:block;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}
@@ -587,8 +587,15 @@ var FBURL='https://www.gstatic.com/firebasejs/12.17.1/',FB=null,ADM=false,MEUNOM
 /* ---------- histórico de atividade ---------- */
 // ATIV: contadores por usuário (malha_ativ). LOGS: as últimas alterações (malha_log), mais recentes primeiro.
 var ATIV={},LOGS=[];
-var ACAO={concluiu:'concluiu a competência',reabriu:'reabriu a competência',pendente:'marcou a competência como Pendente de retorno',standby:'colocou a competência em Standby',anotou:'anotou na competência',avaliou:'avaliou 1 crítica',critica:'anotou em 1 crítica',mes:'definiu o mês do SPED de 1 crítica',sub:'alterou a sub-situação de 1 crítica',marcou:'marcou {n} críticas',conferiu:'conferiu {n} críticas com o SPED',ajustou:'ajustou a data da conclusão',enviou:'enviou {n} marcações feitas sem login',importou:'importou uma cópia do andamento'};
+var ACAO={acesso:'entrou no quadro',concluiu:'concluiu a competência',reabriu:'reabriu a competência',pendente:'marcou a competência como Pendente de retorno',standby:'colocou a competência em Standby',anotou:'anotou na competência',avaliou:'avaliou 1 crítica',critica:'anotou em 1 crítica',mes:'definiu o mês do SPED de 1 crítica',sub:'alterou a sub-situação de 1 crítica',marcou:'marcou {n} críticas',conferiu:'conferiu {n} críticas com o SPED',ajustou:'ajustou a data da conclusão',enviou:'enviou {n} marcações feitas sem login',importou:'importou uma cópia do andamento'};
 // Grava a ação no histórico e soma no contador de quem fez. Falha aqui não atrapalha a marcação em si.
+// Presença: a cada 2 min com a aba visível, grava a hora no contador do usuário (campo on). Não conta como ação.
+var PRESENCA=0;
+function presenca(){
+  if(!db||!db.fb||LOCAL||document.visibilityState==='hidden')return;
+  if(Date.now()-PRESENCA<90000)return;PRESENCA=Date.now();
+  try{var a={nome:MEUNOME||'',on:db.agora()};if(EU)a.sou=EU;db.doc('ativ/'+uid).update(a).catch(function(){});}catch(e){}
+}
 function registrar(tipo,tk,n,det){
   if(!db||!db.fb||LOCAL)return;
   try{
@@ -601,21 +608,29 @@ function tarefa(id){return T.filter(function(x){return x.id===id;})[0];}
 function atividadeHtml(){
   var agora=Date.now(),por={};
   Object.keys(ATIV).forEach(function(em){
-    var a=ATIV[em],k=a.sou||a.nome||NOMES[em]||em.split('@')[0],o=por[k]=por[k]||{n:0,hoje:0,ult:0,emails:[]};
+    var a=ATIV[em],k=a.sou||a.nome||NOMES[em]||em.split('@')[0],o=por[k]=por[k]||{n:0,hoje:0,ult:0,on:0,emails:[]};
     o.emails.push(em);
     o.n+=a.total||0;o.hoje+=(a.dias&&a.dias[HOJE])||0;
     var u=a.ult&&a.ult.toDate?a.ult.toDate().getTime():(a.ult?agora:0);if(u>o.ult)o.ult=u;
+    var on=a.on&&a.on.toDate?a.on.toDate().getTime():(a.on?agora:0);if(on>o.on)o.on=on;
   });
   var nomes=AV.slice();Object.keys(por).forEach(function(k){if(nomes.indexOf(k)<0)nomes.push(k);});
-  var tn=0,th=0,ativos=0,rows=nomes.map(function(k){
-    var o=por[k]||{n:0,hoje:0,ult:0},min=o.ult?(agora-o.ult)/6e4:null,sit;
-    if(!o.ult)sit=['x','Nunca mexeu'];else if(min<10){sit=['on','Ativo agora'];ativos++;}else if(min<60)sit=['re','Parou há '+Math.round(min)+' min'];else if(dloc(new Date(o.ult))===HOJE)sit=['re','Parou há '+Math.round(min/60)+' h'];else sit=['off','Sem atividade hoje'];
+  var tn=0,th=0,ativos=0,online=0,rows=nomes.map(function(k){
+    var o=por[k]||{n:0,hoje:0,ult:0,on:0},min=o.ult?(agora-o.ult)/6e4:null,onl=o.on&&(agora-o.on)<4*6e4,sit;
+    // Ordem: mexendo agora > só com o quadro aberto > parou há pouco > acessou hoje sem mexer > sem nada hoje > nunca.
+    if(min!==null&&min<10){sit=['on','Ativo agora'];ativos++;}
+    else if(onl){sit=['on2',o.ult?'Online, sem alterações há '+(min<60?Math.round(min)+' min':Math.round(min/60)+' h'):'Online, sem alterações'];online++;}
+    else if(min!==null&&min<60)sit=['re','Parou há '+Math.round(min)+' min'];
+    else if(o.ult&&dloc(new Date(o.ult))===HOJE)sit=['re','Parou há '+Math.round(min/60)+' h'];
+    else if(o.on&&dloc(new Date(o.on))===HOJE)sit=['re','Acessou hoje, sem alterações'];
+    else if(o.ult||o.on)sit=['off','Sem atividade hoje'];
+    else sit=['x','Nunca acessou'];
     tn+=o.n;th+=o.hoje;return {k:k,o:o,sit:sit};
-  }).sort(function(a,b){return b.o.ult-a.o.ult||a.k.localeCompare(b.k);});
-  return '<div class="card" style="margin-bottom:14px"><div class="ch"><b>Atividade da equipe</b><span class="meta">'+ativos+(ativos===1?' pessoa ativa':' pessoas ativas')+' agora · '+num(th)+(th===1?' ação hoje':' ações hoje')+' · '+num(tn)+' no total</span></div>'+
-    '<div class="scroll"><table class="big"><thead><tr><th>Colaborador</th><th>Situação</th><th>Última atividade</th><th class="n">Ações hoje</th><th class="n">Ações no total</th></tr></thead><tbody>'+
-    rows.map(function(x){return '<tr data-atv="'+esc(x.k)+'" data-em="'+esc((x.o.emails||[]).join(' '))+'" tabindex="0"><td>'+esc(x.k)+'</td><td><span class="atv '+x.sit[0]+'">'+x.sit[1]+'</span></td><td>'+(x.o.ult?dhora(new Date(x.o.ult)):'—')+'</td><td class="n">'+num(x.o.hoje)+'</td><td class="n">'+num(x.o.n)+'</td></tr>';}).join('')+
-    '</tbody></table></div><p class="note" style="padding:8px 16px 12px;margin:0">Ativo agora = alguma alteração nos últimos 10 minutos. Uma ação é cada marcação gravada: concluir, avaliar, anotar, marcar em lote, conferir com o SPED. Clique no colaborador para ver em quais empresas ele mexeu.</p></div>';
+  }).sort(function(a,b){return Math.max(b.o.ult,b.o.on)-Math.max(a.o.ult,a.o.on)||a.k.localeCompare(b.k);});
+  return '<div class="card" style="margin-bottom:14px"><div class="ch"><b>Atividade da equipe</b><span class="meta">'+ativos+(ativos===1?' pessoa ativa':' pessoas ativas')+' agora'+(online?' · '+online+' online sem alterações':'')+' · '+num(th)+(th===1?' ação hoje':' ações hoje')+' · '+num(tn)+' no total</span></div>'+
+    '<div class="scroll"><table class="big"><thead><tr><th>Colaborador</th><th>Situação</th><th>Última alteração</th><th>Último acesso</th><th class="n">Ações hoje</th><th class="n">Ações no total</th></tr></thead><tbody>'+
+    rows.map(function(x){return '<tr data-atv="'+esc(x.k)+'" data-em="'+esc((x.o.emails||[]).join(' '))+'" tabindex="0"><td>'+esc(x.k)+'</td><td><span class="atv '+x.sit[0]+'">'+x.sit[1]+'</span></td><td>'+(x.o.ult?dhora(new Date(x.o.ult)):'—')+'</td><td>'+(x.o.on?dhora(new Date(x.o.on)):'—')+'</td><td class="n">'+num(x.o.hoje)+'</td><td class="n">'+num(x.o.n)+'</td></tr>';}).join('')+
+    '</tbody></table></div><p class="note" style="padding:8px 16px 12px;margin:0">Ativo agora = alguma alteração nos últimos 10 minutos; Online = com o quadro aberto e logado, mesmo sem alterar nada. Uma ação é cada marcação gravada: concluir, avaliar, anotar, marcar em lote, conferir com o SPED. Quem usa sem entrar com o usuário não aparece aqui. Clique no colaborador para ver em quais empresas ele mexeu.</p></div>';
 }
 function logsHtml(){
   return '<div class="card" style="margin-top:14px"><div class="ch"><b>Últimas alterações</b><span class="meta">as '+LOGS.length+' mais recentes, em tempo real</span></div><div style="padding:10px 16px 14px"><ul class="feed">'+
@@ -695,6 +710,9 @@ async function conectarEquipe(){
   var meu=null;try{meu=await s.getDoc(s.doc(fdb,'usuarios',mail));}catch(e){}
   ADM=!!(meu&&meu.exists()&&meu.data().perfil==='admin');
   nome=meu&&meu.exists()&&meu.data().nome||mail.split('@')[0];MEUNOME=nome;
+  presenca();
+  try{db.log({em:db.agora(),por:uid||'',sou:EU||'',tipo:'acesso',comp:'',e:'',r:'',n:0,det:''}).catch(function(){});}catch(e){}
+  setInterval(presenca,120000);document.addEventListener('visibilitychange',presenca);
   document.getElementById('quem').innerHTML='<div class="uinfo"><b>'+esc(nome)+'</b><span class="nuv">dados na nuvem'+(ADM?' · administrador':'')+'</span></div><button class="tabx" id="sair"><span class="ic">🚪</span><span class="tx">Sair</span></button>';
 }
 /* Marcações feitas neste aparelho antes do login sobem uma vez para a equipe; o que já existe lá não é sobrescrito por algo mais antigo. */
