@@ -359,9 +359,9 @@ var D=JSON.parse(document.getElementById('dados').textContent);
 var T=D.tasks, AV=D.av, NT=D.notas||{}, S={}, C={}, db=null, uid=null, U=null, canWrite=true, NOMES={}, EU='';
 // A situação 6 é a crítica já verificada cuja correção entra no SPED de outro mês; o mês fica no campo m da crítica (MM/AAAA).
 var STN=['Sem avaliação','A corrigir','Corrigida','Não será corrigida','Bug da SEFAZ','Em análise','Corrigir no SPED do mês','Pendente'];
-// Sub-situação (campo u da crítica): o passo em que está a crítica marcada como Bug da SEFAZ ou Corrigir no SPED do mês.
-// A primeira de cada lista é a que vale enquanto ninguém escolhe outra; 'c' é sempre a concluída.
-var SUB={4:[['e','Enviar e-mail SEFAZ'],['a','Aguardando retorno SEFAZ'],['c','Concluído']],6:[['p','Pendente'],['c','Concluído']]};
+// Sub-situação (campo u da crítica): só para Corrigir no SPED do mês, que fica Pendente até o SPED daquele mês ser
+// transmitido. Bug da SEFAZ não tem sub-situação: marcar já encerra a crítica (não vai mais e-mail para a SEFAZ).
+var SUB={6:[['p','Pendente'],['c','Concluído']]};
 function subDe(c){var l=SUB[c.s|0];if(!l)return '';for(var i=0;i<l.length;i++)if(l[i][0]===c.u)return c.u;return l[0][0];}
 function subTxt(c){var l=SUB[c.s|0],u=subDe(c);if(!l)return '';for(var i=0;i<l.length;i++)if(l[i][0]===u)return l[i][1];return '';}
 function mesAtual(){return HOJE.slice(5,7)+'/'+HOJE.slice(0,4);}
@@ -377,14 +377,13 @@ function cst(id,i){var c=C[id+'__'+Math.floor(i/CHUNK)];var it=c&&c.items&&c.ite
 function resumo(t){
   var n=NT[t.id];var r=STN.map(function(){return 0;});
   if(!n)return null;
-  // Além da contagem por situação: pd = críticas pendentes, f4/f6 = Bug da SEFAZ e SPED do mês já concluídas,
-  // ue/ua = Bug da SEFAZ com e-mail a enviar e aguardando retorno.
-  // Pendente é a crítica que ainda pede ação: A corrigir, Em análise, Pendente, e Bug da SEFAZ ou Corrigir no SPED do mês
-  // enquanto a sub-situação não for Concluído. Sem avaliação não entra: ainda não foi olhada.
-  r.pd=0;r.f4=0;r.f6=0;r.ue=0;r.ua=0;
+  // Além da contagem por situação: pd = críticas pendentes e f6 = Corrigir no SPED do mês já concluídas.
+  // Pendente é a crítica que ainda pede ação: A corrigir, Em análise, Pendente, e Corrigir no SPED do mês enquanto a
+  // sub-situação não for Concluído. Sem avaliação não entra (ainda não foi olhada) e Bug da SEFAZ encerra ao marcar.
+  r.pd=0;r.f6=0;
   for(var i=0;i<n.r.length;i++){
     var c=cst(t.id,i),s=c.s|0;r[s]++;
-    if(s===4||s===6){var u=subDe(c);if(u==='c')r['f'+s]++;else{r.pd++;if(u==='a')r.ua++;else if(u==='e')r.ue++;}}
+    if(s===6){if(subDe(c)==='c')r.f6++;else r.pd++;}
     else if(s===1||s===5||s===7)r.pd++;
   }
   return r;
@@ -853,7 +852,7 @@ function resumochips(t){
   var r=resumo(t);if(!r)return'';
   var h='<div class="stchips">';
   if(r[0])h+='<span class="sc s0">'+r[0]+' sem avaliação</span>';
-  for(var i=1;i<STN.length;i++)if(r[i])h+='<span class="sc s'+i+'">'+r[i]+' '+(i===6?'para o SPED de outro mês':i===7?(r[i]===1?'pendente':'pendentes'):esc(STN[i].toLowerCase()))+((i===4||i===6)&&r['f'+i]?' ('+r['f'+i]+(r['f'+i]===1?' concluída)':' concluídas)'):'')+'</span>';
+  for(var i=1;i<STN.length;i++)if(r[i])h+='<span class="sc s'+i+'">'+r[i]+' '+(i===6?'para o SPED de outro mês':i===7?(r[i]===1?'pendente':'pendentes'):esc(STN[i].toLowerCase()))+(i===6&&r.f6?' ('+r.f6+(r.f6===1?' concluída)':' concluídas)'):'')+'</span>';
   var cf=CONF[t.id];
   if(cf)h+='<span class="sc cfc">SPED: '+cfRes(cf.n)+'</span>';
   return h+'</div>';
@@ -899,7 +898,7 @@ function detalhe(t){
     h+='<div class="det">';
     h+='<div class="selbar'+(selc.length?'':' hide')+'" data-selbar="'+t.id+'"><span>'+selc.length+' crítica'+(selc.length===1?'':'s')+' selecionada'+(selc.length===1?'':'s')+'</span>'+
       '<span>Marcar como:</span>'+[1,2,3,4,5,6,7].map(function(s){return '<button class="bt" data-selap="'+t.id+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+
-      '<span>Sub-situação:</span><button class="bt" data-subap="'+t.id+'" data-u="e">Enviar e-mail SEFAZ</button><button class="bt" data-subap="'+t.id+'" data-u="a">Aguardando retorno SEFAZ</button><button class="bt" data-subap="'+t.id+'" data-u="p">Pendente (SPED do mês)</button><button class="bt" data-subap="'+t.id+'" data-u="c">Concluído</button><button class="bt" data-chs="'+t.id+'">Baixar chaves (TXT)</button><button class="bt" data-selclr="'+t.id+'">Limpar seleção</button></div>';
+      '<span>SPED do mês:</span><button class="bt" data-subap="'+t.id+'" data-u="p">Pendente</button><button class="bt" data-subap="'+t.id+'" data-u="c">Concluído</button><button class="bt" data-chs="'+t.id+'">Baixar chaves (TXT)</button><button class="bt" data-selclr="'+t.id+'">Limpar seleção</button></div>';
     var cf=CONF[t.id];
     h+='<div class="cfbar"><span><b>Baixar:</b></span><button class="bt" data-xls="'+t.id+'">Planilha desta competência (Excel)</button><button class="bt" data-chv="'+t.id+'">Chaves de todas as notas (TXT)</button>'+
       (cf&&cf.r&&cf.n.I?'<button class="bt" data-chx="'+t.id+'">Chaves das que precisam de XML (TXT)</button>':'')+'</div>';
@@ -1369,7 +1368,7 @@ function linhasDe(t){
   return n.r.map(function(r,i){var st=cst(t.id,i),v=cf&&cf.r&&cf.r[i];
     return [t.e,t.ie,t.r,t.w,n.t[r[0]][0],n.t[r[0]][1],r[1],r[2],r[4],r[3],r[5]?'Sim':'Não',STN[st.s|0],(st.s|0)===6?st.m||'':'',subTxt(st),st.o||'',v?CFN[v[0]]:'',v?v[1]:'',done(t)?'Sim':'Não',d.obs||''];});
 }
-var CABX=['Empresa','IE','Competência','Responsável','Tipo de crítica','Operação','NF','Valor da crítica','CNPJ/CPF','Chave','Cancelada','Situação da crítica','Mês do SPED da correção','Sub-situação','Anotação','Conferência com o SPED','Evidência da conferência','Competência concluída','Observação da competência'];
+var CABX=['Empresa','IE','Competência','Responsável','Tipo de crítica','Operação','NF','Valor da crítica','CNPJ/CPF','Chave','Cancelada','Situação da crítica','Mês do SPED da correção','SPED do mês (Pendente/Concluído)','Anotação','Conferência com o SPED','Evidência da conferência','Competência concluída','Observação da competência'];
 async function planilha(id){
   var t=T.filter(function(x){return x.id===id;})[0];
   await carregarConf(id,true);
@@ -1395,7 +1394,7 @@ function baixarChaves(id,idxs,rotulo){
 async function exportar(){
   var dl=null;try{dl=window.claude&&await window.claude.use('downloads');}catch(e){}
   await Promise.all(Object.keys(CONF).map(function(id){return carregarConf(id,true);}));
-  var L=[['Colaborador','Data prevista','Periodo','Empresa','IE','Competencia','Valor','Concluida','Observacao da competencia','Tipo de critica','Operacao','NF','Valor da critica','CNPJ','Chave','Situacao da critica','Mes do SPED da correcao','Sub-situacao','Anotacao','Conferencia com o SPED','Evidencia da conferencia']];
+  var L=[['Colaborador','Data prevista','Periodo','Empresa','IE','Competencia','Valor','Concluida','Observacao da competencia','Tipo de critica','Operacao','NF','Valor da critica','CNPJ','Chave','Situacao da critica','Mes do SPED da correcao','SPED do mes (Pendente/Concluido)','Anotacao','Conferencia com o SPED','Evidencia da conferencia']];
   T.forEach(function(t){
     var d=S[t.id]||{},n=NT[t.id],cf=CONF[t.id];
     var base=[t.w,t.d,t.p?'Tarde':'Manhã',t.e,t.ie,t.r,t.v.toFixed(2).replace('.',','),done(t)?'Sim':'Não',d.obs||''];
@@ -1443,8 +1442,8 @@ function relatorio(k,w,sem){
     lin=ts.map(function(t){return base(t).concat([aval(t),situacao(t),brl(t.v)]);});
   }else if(k==='p'){
     ts=ts.filter(function(t){var r=resumo(t);return r&&r.pd;}).sort(function(a,b){return resumo(b).pd-resumo(a).pd;});
-    tit='Críticas pendentes por competência';cab=CB.concat(['A corrigir','Em análise','Pendente','Bug: enviar e-mail','Bug: aguardando SEFAZ','SPED do mês pendente','Total pendente','Valor']);
-    lin=ts.map(function(t){var r=resumo(t);return base(t).concat([num(r[1]),num(r[5]),num(r[7]),num(r.ue),num(r.ua),num(r[6]-r.f6),num(r.pd),brl(t.v)]);});
+    tit='Críticas pendentes por competência';cab=CB.concat(['A corrigir','Em análise','Pendente','SPED do mês pendente','Total pendente','Valor']);
+    lin=ts.map(function(t){var r=resumo(t);return base(t).concat([num(r[1]),num(r[5]),num(r[7]),num(r[6]-r.f6),num(r.pd),brl(t.v)]);});
   }else{
     if(k==='t')ts=ts.filter(function(t){return !done(t);});
     ts.sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:a.w.localeCompare(b.w);});
@@ -1577,9 +1576,9 @@ document.addEventListener('click',function(e){
   if(sb){var bid=sb.dataset.subap,bu=sb.dataset.u,bt=selIdx(bid).length;
     // Cada sub-situação só serve para a situação a que pertence: as outras selecionadas ficam como estão.
     var bi=selIdx(bid).filter(function(i){var l=SUB[cst(bid,i).s|0];return l&&l.some(function(o){return o[0]===bu;});});
-    if(!bi.length){stmsg('Nenhuma das selecionadas aceita essa sub-situação: ela vale para '+(bu==='p'?'“Corrigir no SPED do mês”.':bu==='c'?'“Bug da SEFAZ” e “Corrigir no SPED do mês”.':'“Bug da SEFAZ”.'),true);return;}
+    if(!bi.length){stmsg('Nenhuma das selecionadas está em “Corrigir no SPED do mês”: Pendente e Concluído valem só para essa situação.',true);return;}
     salvarLote(bid,bi,null,null,'',bu);
-    stmsg(num(bi.length)+(bi.length===1?' crítica marcada':' críticas marcadas')+' com a sub-situação “'+sb.textContent.replace(' (SPED do mês)','')+'”.'+(bt>bi.length?' '+num(bt-bi.length)+' de outra situação não '+(bt-bi.length===1?'foi alterada.':'foram alteradas.'):''));return;}
+    stmsg(num(bi.length)+(bi.length===1?' crítica marcada':' críticas marcadas')+' como “'+sb.textContent+'” no SPED do mês.'+(bt>bi.length?' '+num(bt-bi.length)+' de outra situação não '+(bt-bi.length===1?'foi alterada.':'foram alteradas.'):''));return;}
   var rp=e.target.closest('[data-rep]');
   if(rp){replicar(rp.dataset.rep,+rp.dataset.i,rp.parentNode.querySelector('.obsn').value);return;}
   var ca=e.target.closest('[data-cfap]');
