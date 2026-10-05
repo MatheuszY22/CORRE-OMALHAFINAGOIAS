@@ -41,3 +41,14 @@ Depois é só publicar o `index.html` (commit e push no `main`).
 O `lerpdfs.mjs` entende a página girada do relatório: cada linha da tabela é
 uma posição horizontal e cada coluna uma faixa vertical (chave, data de
 processamento, CNPJ/CPF, valor, cancelada, número e série).
+
+## Mês novo
+
+Para incluir um mês inteiro que ainda não está no quadro (as competências
+entram no cronograma depois do que já está marcado, 2 por dia útil):
+
+```ninode incluir-mes.js ..\index.html lidos.json 05/10/2026 092026
+```n
+Depois ajuste à mão, no `index.html`, o subtítulo com o período das
+competências e a data de fim do plano que o script imprime.
+
