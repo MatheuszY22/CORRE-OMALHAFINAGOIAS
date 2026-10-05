@@ -123,6 +123,9 @@ h1{margin:0 0 1px;font-family:var(--f-display);font-weight:700;font-size:20px;le
 .tv small{display:block;font-family:var(--f-body);font-weight:400;font-size:11px;color:var(--muted2)}
 .tag{display:inline-block;font-size:10px;padding:1px 7px;border-radius:9px;font-weight:600;background:var(--barbg);color:var(--muted)}
 .tag.nc{background:var(--warnbg);color:var(--warn)}
+.tag.sb{background:var(--barbg);color:var(--muted)}
+.sitsel{display:block;margin:5px 0 0 auto;font:inherit;font-family:var(--f-body);font-size:11.5px;padding:3px 6px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--fg)}
+.sitsel.sp{border-color:#C9A800}.sitsel.ss{border-color:var(--muted2)}.sitsel.sc{border-color:var(--ok)}
 .tag.h{background:var(--accent-soft);color:var(--accent)}
 .lnk{background:none;border:0;color:var(--link);font-size:12px;cursor:pointer;padding:0;margin-top:5px}
 .det{margin-top:8px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -195,6 +198,7 @@ table.mapa td.n small{display:block;font-family:var(--f-body);font-size:11px;col
 .cel.c.f{background:var(--yellow);color:#113783}
 .cel.p.em{background:#d9641e}
 .cel.pe{box-shadow:inset 0 0 0 3px var(--yellow)}
+.cel.p.sb{background:#6b7690}
 .ord{display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:0;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer}
 .ord span{font-size:9px;opacity:.4}
 .ord:hover,.ord.at{color:var(--accent)}
@@ -281,12 +285,13 @@ table.big tr[data-rel]:hover td,#relb tr[data-ir]:hover td{background:var(--hove
  <div class="toolbar">
   <input id="qm" type="search" placeholder="Buscar empresa ou IE…">
   <select id="fmw"><option value="">Todos os responsáveis</option></select>
-  <select id="fms"><option value="">Todas as empresas</option><option value="a">Com pendência em aberto</option><option value="c">Com tudo concluído</option><option value="e">Em andamento</option><option value="n">Com crítica pendente de retorno</option><option value="f">Com conclusão fora do prazo</option><option value="t">Com atraso em aberto</option></select>
+  <select id="fms"><option value="">Todas as empresas</option><option value="a">Com pendência em aberto</option><option value="c">Com tudo concluído</option><option value="e">Em andamento</option><option value="n">Pendentes de retorno</option><option value="y">Em standby</option><option value="f">Com conclusão fora do prazo</option><option value="t">Com atraso em aberto</option></select>
  </div>
  <div class="leg">
   <span><i class="cel p" style="--p:40%">12</i>Mês com crítica em aberto (quantidade de críticas; a faixa branca mostra quanto já foi avaliado)</span>
   <span><i class="cel p em">12</i>Em andamento (alguma crítica já avaliada)</span>
-  <span><i class="cel p pe">12</i>Com crítica pendente de retorno</span>
+  <span><i class="cel p pe">12</i>Pendente de retorno (competência ou crítica)</span>
+  <span><i class="cel p sb">12</i>Em standby (parada)</span>
   <span><i class="cel c">✓</i>Concluída no prazo</span>
   <span><i class="cel c f">✓</i>Concluída fora do prazo</span>
   <span><i class="cel l"></i>Mês sem pendência</span>
@@ -299,7 +304,7 @@ table.big tr[data-rel]:hover td,#relb tr[data-ir]:hover td{background:var(--hove
 <section id="crono" class="hide">
  <div class="toolbar">
   <input id="q" type="search" placeholder="Buscar empresa, IE ou competência…">
-  <select id="fst"><option value="">Todas as situações</option><option value="p">Pendentes</option><option value="a">Atrasadas</option><option value="c">Concluídas</option><option value="x">Concluídas fora do prazo</option><option value="h">Do dia</option><option value="s">Com críticas sem avaliação</option><option value="n">Com crítica pendente</option><option value="b">Com bug da SEFAZ</option><option value="f">Conferidas com o SPED</option><option value="r">Com crítica confirmada no SPED</option></select>
+  <select id="fst"><option value="">Todas as situações</option><option value="p">Pendentes</option><option value="a">Atrasadas</option><option value="c">Concluídas</option><option value="x">Concluídas fora do prazo</option><option value="w">Pendentes de retorno</option><option value="y">Em standby</option><option value="h">Do dia</option><option value="s">Com críticas sem avaliação</option><option value="n">Com crítica pendente</option><option value="b">Com bug da SEFAZ</option><option value="f">Conferidas com o SPED</option><option value="r">Com crítica confirmada no SPED</option></select>
   <select id="fwk"><option value="">Todas as semanas</option></select>
  </div>
  <div class="chips" id="chips" style="margin-bottom:6px"></div>
@@ -431,6 +436,7 @@ async function ajustarData(id){
 var REM={};
 function gravarStatus(k){
   var d=S[k]||{},r=REM[k]||{},o={done:!!d.done,obs:d.obs||'',by:uid||'',at:new Date().toISOString()};
+  if(!d.done&&d.sit)o.sit=d.sit;
   if(!db.fb){if(d.done&&d.fim){o.fim=d.fim;o.fimPor=d.fimPor||'';}return db.doc('status/'+k).set(o);}
   // Já estava concluída no banco: só a observação muda, a hora da conclusão fica intocada.
   if(d.done&&r.done){delete o.done;if(!r.fim)delete o.at;return db.doc('status/'+k).update(o);}
@@ -493,7 +499,7 @@ var FBURL='https://www.gstatic.com/firebasejs/12.17.1/',FB=null,ADM=false,MEUNOM
 /* ---------- histórico de atividade ---------- */
 // ATIV: contadores por usuário (malha_ativ). LOGS: as últimas alterações (malha_log), mais recentes primeiro.
 var ATIV={},LOGS=[];
-var ACAO={concluiu:'concluiu a competência',reabriu:'reabriu a competência',anotou:'anotou na competência',avaliou:'avaliou 1 crítica',critica:'anotou em 1 crítica',mes:'definiu o mês do SPED de 1 crítica',sub:'alterou a sub-situação de 1 crítica',marcou:'marcou {n} críticas',conferiu:'conferiu {n} críticas com o SPED',ajustou:'ajustou a data da conclusão',enviou:'enviou {n} marcações feitas sem login',importou:'importou uma cópia do andamento'};
+var ACAO={concluiu:'concluiu a competência',reabriu:'reabriu a competência',pendente:'marcou a competência como Pendente de retorno',standby:'colocou a competência em Standby',anotou:'anotou na competência',avaliou:'avaliou 1 crítica',critica:'anotou em 1 crítica',mes:'definiu o mês do SPED de 1 crítica',sub:'alterou a sub-situação de 1 crítica',marcou:'marcou {n} críticas',conferiu:'conferiu {n} críticas com o SPED',ajustou:'ajustou a data da conclusão',enviou:'enviou {n} marcações feitas sem login',importou:'importou uma cópia do andamento'};
 // Grava a ação no histórico e soma no contador de quem fez. Falha aqui não atrapalha a marcação em si.
 function registrar(tipo,tk,n,det){
   if(!db||!db.fb||LOCAL)return;
@@ -638,12 +644,13 @@ async function salvarPref(w){
 }
 async function salvar(id,patch){
   var ant=S[id]||{},at=Object.assign({},ant,patch);at.at=new Date().toISOString();
-  if(!at.done){delete at.fim;delete at.fimPor;}
+  if(!at.done){delete at.fim;delete at.fimPor;}else at.sit='';
+  if(!at.sit)delete at.sit;
   else if(!ant.done){at.fim=at.at;at.fimPor=uid||'';}
   S[id]=at;render();
   if(LOCAL){gravarLocal();return;}
   if(!db||!canWrite)return;
-  registrar(patch.done===true?'concluiu':patch.done===false?'reabriu':'anotou',tarefa(id),1,'');
+  registrar(patch.done===true?'concluiu':patch.sit==='p'?'pendente':patch.sit==='s'?'standby':patch.done===false?'reabriu':'anotou',tarefa(id),1,'');
   fila[id]=at;
   try{await gravarStatus(id);}
   catch(e){canWrite=(e.code!=='invalid_argument');stmsg(canWrite?'Falha ao salvar ('+e.code+'). Tente de novo.':'Você tem acesso somente de leitura: as marcações não são salvas.',true);}
@@ -737,7 +744,7 @@ function kpis(){
   document.getElementById('gbar').style.width=(tot?c*100/tot:0)+'%';
 }
 function painel(){
-  var h=db&&db.fb?atividadeHtml():'';
+  var h=db&&db.fb&&ADM?atividadeHtml():'';
   h+='<div class="pgrid">';
   AV.forEach(function(a){
     var ts=T.filter(function(t){return t.w===a;}),c=ts.filter(done).length,at=ts.filter(late).length;
@@ -813,6 +820,8 @@ function passa(t){
   if(s==='f'&&!CONF[t.id])return false;
   if(s==='r'&&!(CONF[t.id]&&CONF[t.id].n.R))return false;
   if(s==='x'&&!foraPrazo(t))return false;
+  if(s==='w'&&!pendRet(t))return false;
+  if(s==='y'&&sitDe(t)!=='s')return false;
   return true;
 }
 // Andamento da avaliação: crítica avaliada é a que já saiu de "Sem avaliação". Só chega a 100% com todas avaliadas.
@@ -824,7 +833,7 @@ function progHtml(t){
 }
 function linha(t){
   var d=S[t.id]||{},cl='t'+(done(t)?' done':'')+(late(t)?' late':'');
-  var tags=(t.c!=='própria'?'<span class="tag h">'+t.c+(t.c==='herdada'?' de '+esc(t.rm):'')+'</span>':'')+(t.st?'<span class="tag nc">não obrigado</span>':'')+(foraPrazo(t)?'<span class="tag nc">concluída fora do prazo</span>':'');
+  var tags=(t.c!=='própria'?'<span class="tag h">'+t.c+(t.c==='herdada'?' de '+esc(t.rm):'')+'</span>':'')+(t.st?'<span class="tag nc">não obrigado</span>':'')+(foraPrazo(t)?'<span class="tag nc">concluída fora do prazo</span>':'')+(sitDe(t)==='p'?'<span class="tag nc">pendente de retorno</span>':sitDe(t)==='s'?'<span class="tag sb">standby</span>':'');
   return '<div class="'+cl+'" data-id="'+t.id+'">'+
    '<input type="checkbox" class="cbx" '+(done(t)?'checked':'')+' aria-label="Concluir">'+
    '<div class="ti"><div class="tn" data-tog="'+t.id+'" tabindex="0" title="Clique para abrir ou recolher as críticas">'+esc(t.e)+'</div>'+
@@ -834,7 +843,8 @@ function linha(t){
    resumochips(t)+progHtml(t)+
    '<button class="lnk" data-det="'+t.id+'">'+(NT[t.id]?'Avaliar críticas':'Ver críticas')+' ('+num(t.q)+')</button>'+
    '<div class="detwrap"></div></div>'+
-   '<div class="tv">'+brl(t.v)+'<small>'+num(t.q)+' críticas</small></div></div>';
+   '<div class="tv">'+brl(t.v)+'<small>'+num(t.q)+' críticas</small>'+
+   '<select class="sitsel '+(done(t)?'sc':sitDe(t)==='p'?'sp':sitDe(t)==='s'?'ss':'')+'" data-sitsel="'+t.id+'" aria-label="Situação da competência"><option value=""'+(!done(t)&&!sitDe(t)?' selected':'')+'>Em aberto</option><option value="p"'+(sitDe(t)==='p'?' selected':'')+'>Pendente</option><option value="s"'+(sitDe(t)==='s'?' selected':'')+'>Standby</option><option value="c"'+(done(t)?' selected':'')+'>Concluída</option></select></div></div>';
 }
 function resumochips(t){
   var r=resumo(t);if(!r)return'';
@@ -1189,6 +1199,10 @@ var fmapa={q:'',w:'',s:''};
 var omapa={k:'e',d:1};
 // Peso do mês na ordenação: em aberto pesa pela quantidade de críticas; abaixo vêm concluída fora do prazo, concluída, sem pendência e fora do período.
 // Em andamento: competência em aberto em que alguma crítica já foi avaliada.
+// Situação da competência (campo sit): '' em aberto, 'p' pendente de retorno, 's' standby. Concluída é o done.
+function sitDe(t){var d=S[t.id];return d&&!d.done&&d.sit?d.sit:'';}
+// Pendente de retorno: a competência marcada como Pendente ou alguma crítica marcada como Pendente.
+function pendRet(t){if(done(t))return false;if(sitDe(t)==='p')return true;var r=resumo(t);return !!(r&&r[7]);}
 function andando(t){var r=!done(t)&&resumo(t);return !!(r&&prog(r).av>0);}
 function pesoMes(t,dentro){return t?(done(t)?(foraPrazo(t)?-1:-2):t.q):dentro?-3:-4;}
 function thOrd(k,rot,cls){
@@ -1220,7 +1234,8 @@ function mapa(){
       if(fmapa.s==='f'&&!ts.some(foraPrazo))return;
       if(fmapa.s==='t'&&!ts.some(late))return;
       if(fmapa.s==='e'&&!ts.some(andando))return;
-      if(fmapa.s==='n'&&!ts.some(function(t){var r=resumo(t);return !!(r&&r[7]);}))return;
+      if(fmapa.s==='n'&&!ts.some(pendRet))return;
+      if(fmapa.s==='y'&&!ts.some(function(t){return sitDe(t)==='s';}))return;
       nan+=ts.filter(andando).length;
       nf+=ts.filter(foraPrazo).length;
       ne++;np+=ts.length;nc+=ts.length-ab.length;
@@ -1237,7 +1252,7 @@ function mapa(){
       for(var m=1;m<=12;m++){
         var t=p.c[a+'-'+m],ml=MES[m-1]+'/'+a;
         var rr=t&&!done(t)&&resumo(t);
-        if(t)linhas+='<td class="m"><button class="cel '+(done(t)?(foraPrazo(t)?'c f':'c'):(andando(t)?'p em':'p'))+(rr&&rr[7]?' pe':'')+'"'+(rr?' style="--p:'+prog(rr).p+'%"':'')+' data-cel="'+t.id+'" aria-label="'+ml+': '+num(t.q)+' críticas, '+brl(t.v)+', '+(done(t)?(foraPrazo(t)?'concluída fora do prazo':'concluída no prazo'):andando(t)?'em andamento':'em aberto')+(rr&&rr[7]?', com crítica pendente de retorno':'')+'">'+(done(t)?'✓':abrev(t.q))+'</button></td>';
+        if(t)linhas+='<td class="m"><button class="cel '+(done(t)?(foraPrazo(t)?'c f':'c'):(sitDe(t)==='s'?'p sb':andando(t)?'p em':'p'))+(pendRet(t)?' pe':'')+'"'+(rr?' style="--p:'+prog(rr).p+'%"':'')+' data-cel="'+t.id+'" aria-label="'+ml+': '+num(t.q)+' críticas, '+brl(t.v)+', '+(done(t)?(foraPrazo(t)?'concluída fora do prazo':'concluída no prazo'):sitDe(t)==='s'?'em standby':andando(t)?'em andamento':'em aberto')+(pendRet(t)?', pendente de retorno':'')+'">'+(done(t)?'✓':abrev(t.q))+'</button></td>';
         else if(m>=R.ini&&m<=R.fim)linhas+='<td class="m"><span class="cel l" role="img" data-mes="'+ml+'" aria-label="'+ml+': sem pendência"></span></td>';
         else linhas+='<td class="m"><span class="cel x" role="img" data-fora="'+ml+'" aria-label="'+ml+': fora do período analisado">–</span></td>';
       }
@@ -1260,7 +1275,7 @@ function tipDe(c){
     h+='Concluída'+(f?' em '+fimTxt(S[id]):'')+(qf?' por '+esc(qf):'');
     if(S[id].ajustePor)h+='<br>'+ajusteTxt(S[id]);
     if(foraPrazo(t))h+='<br>Fora do prazo: '+pl(ndias(t.d,dloc(f)),'dia depois','dias depois')+' do previsto ('+fdata(t.d)+')';
-  }else h+=(late(t)?'Atrasada há '+pl(ndias(t.d,HOJE),'dia','dias'):'Em aberto')+' · prevista para '+fdata(t.d)+' ('+esc(t.w)+')';
+  }else h+=(sitDe(t)==='p'?'Pendente de retorno':sitDe(t)==='s'?'Em standby':late(t)?'Atrasada há '+pl(ndias(t.d,HOJE),'dia','dias'):'Em aberto')+(sitDe(t)&&late(t)?' · atrasada há '+pl(ndias(t.d,HOJE),'dia','dias'):'')+' · prevista para '+fdata(t.d)+' ('+esc(t.w)+')';
   if(r){var g=prog(r);h+='<br>'+num(g.av)+' de '+num(g.tot)+' críticas avaliadas ('+g.p+'%)';
     if(!done(t)&&r.pd)h+='<br>'+num(r.pd)+(r.pd===1?' crítica ainda pede ação':' críticas ainda pedem ação')+(r[7]?' · '+num(r[7])+(r[7]===1?' marcada como Pendente':' marcadas como Pendente'):'');}
   var cf=CONF[id];
@@ -1400,7 +1415,7 @@ function ndias(a,b){return Math.round((dt(b)-dt(a))/864e5);}
 function pl(n,um,varios){return num(n)+' '+(n===1?um:varios);}
 function dhora(s){var d=new Date(s);return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
 function aval(t){var r=resumo(t);if(!r)return '—';r=prog(r);return num(r.av)+' de '+num(r.tot)+' · '+r.p+'%';}
-function situacao(t){var f=fimDe(S[t.id]);return done(t)?'Concluída'+(f?' em '+fimTxt(S[t.id]):'')+(foraPrazo(t)?' (fora do prazo)':''):late(t)?'Atrasada há '+pl(ndias(t.d,HOJE),'dia','dias'):'Em aberto';}
+function situacao(t){var f=fimDe(S[t.id]),s=sitDe(t);return done(t)?'Concluída'+(f?' em '+fimTxt(S[t.id]):'')+(foraPrazo(t)?' (fora do prazo)':''):(s==='p'?'Pendente de retorno':s==='s'?'Standby':late(t)?'Atrasada há '+pl(ndias(t.d,HOJE),'dia','dias'):'Em aberto')+(s&&late(t)?' · atrasada há '+pl(ndias(t.d,HOJE),'dia','dias'):'');}
 function relatorio(k,w,sem){
   var ts=T.filter(function(t){return (!w||t.w===w)&&(!sem||t.sem===sem);}),tit,cab,lin,vt=0;
   var CB=['Empresa','IE','Competência','Responsável','Data prevista'];
@@ -1603,7 +1618,8 @@ document.addEventListener('change',function(e){
     var mid=e.target.dataset.mesn,mi=+e.target.dataset.i,mv=mesOk(e.target.value);
     if(!mv){stmsg('Mês inválido: use o formato MM/AAAA, por exemplo '+mesAtual()+'.',true);e.target.value=cst(mid,mi).m||'';return;}
     salvarCritica(mid,mi,{m:mv});return;}
-  if(e.target.classList.contains('cbx')){var id=e.target.closest('[data-id]').dataset.id;salvar(id,{done:e.target.checked});}
+  if(e.target.classList.contains('cbx')){var id=e.target.closest('[data-id]').dataset.id;salvar(id,e.target.checked?{done:true,sit:''}:{done:false});}
+  if(e.target.classList.contains('sitsel')){var vs=e.target.value;salvar(e.target.dataset.sitsel,vs==='c'?{done:true,sit:''}:{done:false,sit:vs});}
 });
 var tmr={};
 document.addEventListener('input',function(e){
