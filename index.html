@@ -193,6 +193,8 @@ table.mapa td.n small{display:block;font-family:var(--f-body);font-size:11px;col
 .cel.p{background:var(--crit);cursor:pointer}
 .cel.c{background:var(--good);cursor:pointer;font-size:16px}
 .cel.c.f{background:var(--yellow);color:#113783}
+.cel.p.em{background:#d9641e}
+.cel.pe{box-shadow:inset 0 0 0 3px var(--yellow)}
 .ord{display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:0;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer}
 .ord span{font-size:9px;opacity:.4}
 .ord:hover,.ord.at{color:var(--accent)}
@@ -213,6 +215,9 @@ button.cel:hover{filter:brightness(1.12)}
 .cf.cN{box-shadow:inset 3px 0 0 var(--good)}.cf.cN b{color:var(--ok)}
 .cf.cI{box-shadow:inset 3px 0 0 #fab219}.cf.cI b{color:var(--warn)}
 .sc.cfc{background:var(--accent-soft);color:var(--accent)}
+.atv{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap}
+.atv::before{content:'';flex:none;width:8px;height:8px;border-radius:50%;background:currentColor}
+.atv.on{color:var(--ok)}.atv.re{color:var(--warn)}.atv.off{color:var(--muted2)}.atv.x{color:var(--late)}
 .rep{grid-column:1/-1;justify-self:start;margin-top:0;font-size:11.5px}
 .pg{display:flex;align-items:center;gap:9px;margin:7px 0 1px;font-size:11.5px;color:var(--muted)}
 .pg .bar{flex:0 1 190px;margin:0}
@@ -276,10 +281,12 @@ table.big tr[data-rel]:hover td,#relb tr[data-ir]:hover td{background:var(--hove
  <div class="toolbar">
   <input id="qm" type="search" placeholder="Buscar empresa ou IE…">
   <select id="fmw"><option value="">Todos os responsáveis</option></select>
-  <select id="fms"><option value="">Todas as empresas</option><option value="a">Com pendência em aberto</option><option value="c">Com tudo concluído</option><option value="f">Com conclusão fora do prazo</option><option value="t">Com atraso em aberto</option></select>
+  <select id="fms"><option value="">Todas as empresas</option><option value="a">Com pendência em aberto</option><option value="c">Com tudo concluído</option><option value="e">Em andamento</option><option value="n">Com crítica pendente de retorno</option><option value="f">Com conclusão fora do prazo</option><option value="t">Com atraso em aberto</option></select>
  </div>
  <div class="leg">
   <span><i class="cel p" style="--p:40%">12</i>Mês com crítica em aberto (quantidade de críticas; a faixa branca mostra quanto já foi avaliado)</span>
+  <span><i class="cel p em">12</i>Em andamento (alguma crítica já avaliada)</span>
+  <span><i class="cel p pe">12</i>Com crítica pendente de retorno</span>
   <span><i class="cel c">✓</i>Concluída no prazo</span>
   <span><i class="cel c f">✓</i>Concluída fora do prazo</span>
   <span><i class="cel l"></i>Mês sem pendência</span>
@@ -417,6 +424,7 @@ async function ajustarData(id){
   if(!mot){stmsg('Ajuste cancelado: o motivo é obrigatório.',true);return;}
   try{
     await db.doc('status/'+id).update({fim:db.hora(d),ajustePor:uid,ajusteEm:db.agora(),ajusteMotivo:mot.slice(0,300),by:uid,at:new Date().toISOString()});
+    registrar('ajustou',t,1,'para '+d.toLocaleDateString('pt-BR')+': '+mot.slice(0,80));
     stmsg('Data da conclusão ajustada para '+d.toLocaleDateString('pt-BR')+'. O ajuste fica registrado com o seu nome e o motivo.');
   }catch(e){stmsg('Não foi possível ajustar a data ('+e.code+').',true);}
 }
@@ -460,6 +468,10 @@ async function iniciar(){
     stmsg('Marcações salvas e compartilhadas com a equipe. Última atualização: '+new Date().toLocaleTimeString('pt-BR')+'.');
     if(db.fb&&!(prim&2)){prim|=2;if(prim===3)subirLocal();}
   },function(e){if(!recusado(e))stmsg('Não foi possível ler as marcações ('+e.code+'). O quadro está em modo leitura.',true);});
+  if(db.fb){
+    db.collection('ativ').onSnapshot(function(snap){var novo={};snap.docs.forEach(function(d){novo[d.id]=d.data();});ATIV=novo;nomes();render();},function(){});
+    db.recentes('log',300,function(snap){LOGS=snap.docs.map(function(d){return d.data();});nomes();render();},function(){});
+  }
   if(db.fb)db.collection('conf').onSnapshot(function(snap){
     var novo={};snap.docs.forEach(function(d){var v=d.data(),a=CONFR[d.id];
       novo[d.id]=a&&a.at===v.at?a:{n:v.n||{R:0,N:0,I:0},tot:v.tot||0,fin:v.fin||'',by:v.by||'',at:v.at||'',rem:true};});
@@ -477,7 +489,46 @@ function mostrarEU(){
 /* Fora do Claude, o quadro grava no Firestore do projeto controle-tare-azuos, nas coleções malha_*.
    O login é o mesmo do Controle TARE. Esta configuração não é segredo: quem protege são as regras do banco. */
 var FBC={apiKey:'AIzaSyDUC5Xw2lyrZmAkayApbaN5MfArHfsX5uU',authDomain:'controle-tare-azuos.firebaseapp.com',projectId:'controle-tare-azuos',appId:'1:752740297475:web:dab1cde392170be71c9736'};
-var FBURL='https://www.gstatic.com/firebasejs/12.17.1/',FB=null,ADM=false;
+var FBURL='https://www.gstatic.com/firebasejs/12.17.1/',FB=null,ADM=false,MEUNOME='';
+/* ---------- histórico de atividade ---------- */
+// ATIV: contadores por usuário (malha_ativ). LOGS: as últimas alterações (malha_log), mais recentes primeiro.
+var ATIV={},LOGS=[];
+var ACAO={concluiu:'concluiu a competência',reabriu:'reabriu a competência',anotou:'anotou na competência',avaliou:'avaliou 1 crítica',critica:'anotou em 1 crítica',mes:'definiu o mês do SPED de 1 crítica',sub:'alterou a sub-situação de 1 crítica',marcou:'marcou {n} críticas',conferiu:'conferiu {n} críticas com o SPED',ajustou:'ajustou a data da conclusão',enviou:'enviou {n} marcações feitas sem login',importou:'importou uma cópia do andamento'};
+// Grava a ação no histórico e soma no contador de quem fez. Falha aqui não atrapalha a marcação em si.
+function registrar(tipo,tk,n,det){
+  if(!db||!db.fb||LOCAL)return;
+  try{
+    db.log({em:db.agora(),por:uid||'',sou:EU||'',tipo:tipo,comp:tk?tk.id:'',e:tk?tk.e:'',r:tk?tk.r:'',n:n||0,det:det||''}).catch(function(){});
+    var a={nome:MEUNOME||'',sou:EU||'',total:db.inc(1),ult:db.agora(),dias:{}};a.dias[HOJE]=db.inc(1);
+    db.doc('ativ/'+uid).update(a).catch(function(){});
+  }catch(e){}
+}
+function tarefa(id){return T.filter(function(x){return x.id===id;})[0];}
+function atividadeHtml(){
+  var agora=Date.now(),por={};
+  Object.keys(ATIV).forEach(function(em){
+    var a=ATIV[em],k=a.sou||a.nome||NOMES[em]||em.split('@')[0],o=por[k]=por[k]||{n:0,hoje:0,ult:0};
+    o.n+=a.total||0;o.hoje+=(a.dias&&a.dias[HOJE])||0;
+    var u=a.ult&&a.ult.toDate?a.ult.toDate().getTime():(a.ult?agora:0);if(u>o.ult)o.ult=u;
+  });
+  var nomes=AV.slice();Object.keys(por).forEach(function(k){if(nomes.indexOf(k)<0)nomes.push(k);});
+  var tn=0,th=0,ativos=0,rows=nomes.map(function(k){
+    var o=por[k]||{n:0,hoje:0,ult:0},min=o.ult?(agora-o.ult)/6e4:null,sit;
+    if(!o.ult)sit=['x','Nunca mexeu'];else if(min<10){sit=['on','Ativo agora'];ativos++;}else if(min<60)sit=['re','Parou há '+Math.round(min)+' min'];else if(dloc(new Date(o.ult))===HOJE)sit=['re','Parou há '+Math.round(min/60)+' h'];else sit=['off','Sem atividade hoje'];
+    tn+=o.n;th+=o.hoje;return {k:k,o:o,sit:sit};
+  }).sort(function(a,b){return b.o.ult-a.o.ult||a.k.localeCompare(b.k);});
+  return '<div class="card" style="margin-bottom:14px"><div class="ch"><b>Atividade da equipe</b><span class="meta">'+ativos+(ativos===1?' pessoa ativa':' pessoas ativas')+' agora · '+num(th)+(th===1?' ação hoje':' ações hoje')+' · '+num(tn)+' no total</span></div>'+
+    '<div class="scroll"><table class="big"><thead><tr><th>Colaborador</th><th>Situação</th><th>Última atividade</th><th class="n">Ações hoje</th><th class="n">Ações no total</th></tr></thead><tbody>'+
+    rows.map(function(x){return '<tr><td>'+esc(x.k)+'</td><td><span class="atv '+x.sit[0]+'">'+x.sit[1]+'</span></td><td>'+(x.o.ult?dhora(new Date(x.o.ult)):'—')+'</td><td class="n">'+num(x.o.hoje)+'</td><td class="n">'+num(x.o.n)+'</td></tr>';}).join('')+
+    '</tbody></table></div><p class="note" style="padding:8px 16px 12px;margin:0">Ativo agora = alguma alteração nos últimos 10 minutos. Uma ação é cada marcação gravada: concluir, avaliar, anotar, marcar em lote, conferir com o SPED.</p></div>';
+}
+function logsHtml(){
+  return '<div class="card" style="margin-top:14px"><div class="ch"><b>Últimas alterações</b><span class="meta">as '+LOGS.length+' mais recentes, em tempo real</span></div><div style="padding:10px 16px 14px"><ul class="feed">'+
+    LOGS.slice(0,40).map(function(l){
+      var q=l.sou||NOMES[l.por]||(l.por||'alguém').split('@')[0],d=l.em&&l.em.toDate?l.em.toDate():new Date(),a=(ACAO[l.tipo]||l.tipo).replace('{n}',num(l.n||0)).replace(/\b1 críticas/,'1 crítica').replace('1 marcações feitas','1 marcação feita');
+      return '<li><b>'+esc(q)+'</b> — '+a+(l.det?' ('+esc(l.det)+')':'')+(l.e?' em '+esc(l.e)+' '+esc(l.r):'')+' · '+d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'</li>';
+    }).join('')+'</ul></div></div>';
+}
 var ERRO={'auth/invalid-email':'E-mail inválido.','auth/user-disabled':'Este usuário foi desativado.','auth/user-not-found':'Nome de usuário ou senha incorretos.','auth/wrong-password':'Nome de usuário ou senha incorretos.','auth/invalid-credential':'Nome de usuário ou senha incorretos.','auth/too-many-requests':'Muitas tentativas. Aguarde alguns minutos.','auth/network-request-failed':'Sem conexão com a internet.'};
 function fbErr(e){return e&&e.code==='permission-denied'?{code:'o banco recusou a gravação; recarregue a página com Ctrl+F5 e, se continuar, fale com o administrador'}:e;}
 function slug(t){return (t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim().replace(/[^a-z0-9._\- ]/g,'').replace(/\s+/g,'.').replace(/\.{2,}/g,'.').replace(/^[.\-_]+|[.\-_]+$/g,'');}
@@ -538,13 +589,16 @@ async function conectarEquipe(){
       update:function(v){return s.setDoc(r,v,{merge:true}).catch(function(e){throw fbErr(e);});}};},
     agora:function(){return s.serverTimestamp();},
     hora:function(d){return s.Timestamp.fromDate(d);},
+    inc:function(n){return s.increment(n);},
+    log:function(o){return s.addDoc(s.collection(fdb,'malha_log'),o);},
+    recentes:function(n,lim,ok,err){return s.onSnapshot(s.query(s.collection(fdb,'malha_'+n),s.orderBy('em','desc'),s.limit(lim)),ok,err);},
     collection:function(n){return {onSnapshot:function(ok,err){return s.onSnapshot(s.collection(fdb,'malha_'+n),ok,err);}};}};
   uid=mail;
   U={id:function(){return Promise.resolve(mail);},can:function(){return Promise.resolve(true);},
     profiles:async function(ids){var o={};for(var i=0;i<ids.length;i++)o[ids[i]]={name:await perfil(ids[i])};return o;}};
   var meu=null;try{meu=await s.getDoc(s.doc(fdb,'usuarios',mail));}catch(e){}
   ADM=!!(meu&&meu.exists()&&meu.data().perfil==='admin');
-  nome=meu&&meu.exists()&&meu.data().nome||mail.split('@')[0];
+  nome=meu&&meu.exists()&&meu.data().nome||mail.split('@')[0];MEUNOME=nome;
   document.getElementById('quem').innerHTML='<div class="uinfo"><b>'+esc(nome)+'</b><span class="nuv">dados na nuvem'+(ADM?' · administrador':'')+'</span></div><button class="tabx" id="sair"><span class="ic">🚪</span><span class="tx">Sair</span></button>';
 }
 /* Marcações feitas neste aparelho antes do login sobem uma vez para a equipe; o que já existe lá não é sobrescrito por algo mais antigo. */
@@ -560,13 +614,13 @@ async function subirLocal(){
       if(t){await db.doc('criticas/'+c).update({items:parc,by:uid,at:new Date().toISOString()});n+=t;}}
     if(o.EU&&!EU){filtro.w=o.EU;salvarPref(o.EU);mostrarEU();render();}
     localStorage.setItem(LK+'-enviado',bruto);localStorage.removeItem(LK);
-    if(n)stmsg(num(n)+(n===1?' marcação feita':' marcações feitas')+' neste aparelho antes do login '+(n===1?'foi enviada':'foram enviadas')+' para a equipe.');
+    if(n){registrar('enviou',null,n,'');stmsg(num(n)+(n===1?' marcação feita':' marcações feitas')+' neste aparelho antes do login '+(n===1?'foi enviada':'foram enviadas')+' para a equipe.');}
   }catch(e){stmsg('Não foi possível enviar para a equipe as marcações deste aparelho ('+(e.code||e.message)+'). Elas continuam guardadas aqui.',true);}
 }
 var fila={};
 async function nomes(){
   if(!U)return;
-  var ids={};Object.keys(S).forEach(function(k){if(S[k].by)ids[S[k].by]=1;});Object.keys(C).forEach(function(k){if(C[k].by)ids[C[k].by]=1;});Object.keys(CONFR).forEach(function(k){if(CONFR[k].by)ids[CONFR[k].by]=1;});
+  var ids={};Object.keys(S).forEach(function(k){if(S[k].by)ids[S[k].by]=1;});Object.keys(C).forEach(function(k){if(C[k].by)ids[C[k].by]=1;});Object.keys(CONFR).forEach(function(k){if(CONFR[k].by)ids[CONFR[k].by]=1;});Object.keys(ATIV).forEach(function(k){ids[k]=1;});LOGS.forEach(function(l){if(l.por)ids[l.por]=1;});
   var lista=Object.keys(ids).filter(function(i){return !(i in NOMES);});
   if(!lista.length)return;
   try{var ps=await U.profiles(Object.keys(ids));Object.keys(ps).forEach(function(i){NOMES[i]=ps[i].name||'';});render();}catch(e){}
@@ -589,6 +643,7 @@ async function salvar(id,patch){
   S[id]=at;render();
   if(LOCAL){gravarLocal();return;}
   if(!db||!canWrite)return;
+  registrar(patch.done===true?'concluiu':patch.done===false?'reabriu':'anotou',tarefa(id),1,'');
   fila[id]=at;
   try{await gravarStatus(id);}
   catch(e){canWrite=(e.code!=='invalid_argument');stmsg(canWrite?'Falha ao salvar ('+e.code+'). Tente de novo.':'Você tem acesso somente de leitura: as marcações não são salvas.',true);}
@@ -602,6 +657,7 @@ async function salvarCritica(id,i,patch){
   C[ck]=Object.assign({},cur,{at:new Date().toISOString()});render();
   if(LOCAL){gravarLocal();return;}
   if(!db||!canWrite)return;
+  registrar(patch.s!=null?'avaliou':patch.o!=null?'critica':patch.m?'mes':'sub',tarefa(id),1,patch.s!=null?STN[patch.s]:patch.u?subTxt(it):'');
   var body={};body[i]={s:it.s,o:it.o||'',u:it.u||''};if(it.m)body[i].m=it.m;
   try{await db.doc('criticas/'+ck).update(db.fb?{items:body,by:uid||'',at:new Date().toISOString()}:{items:body});}
   catch(e){
@@ -650,6 +706,7 @@ async function salvarLote(id,idxs,s,txt,mes,sub){
   render();
   if(LOCAL){gravarLocal();return;}
   if(!db||!canWrite)return;
+  registrar('marcou',tarefa(id),idxs.length,(s!=null?'como '+STN[s]:sub?'sub-situação':'')+(txt!=null?', com anotação':''));
   for(var c in porChunk){
     var ck=id+'__'+c;
     try{
@@ -680,7 +737,8 @@ function kpis(){
   document.getElementById('gbar').style.width=(tot?c*100/tot:0)+'%';
 }
 function painel(){
-  var h='<div class="pgrid">';
+  var h=db&&db.fb?atividadeHtml():'';
+  h+='<div class="pgrid">';
   AV.forEach(function(a){
     var ts=T.filter(function(t){return t.w===a;}),c=ts.filter(done).length,at=ts.filter(late).length;
     var v=0,vc=0;ts.forEach(function(t){v+=t.v;if(done(t))vc+=t.v;});
@@ -709,8 +767,9 @@ function painel(){
   STN.forEach(function(nm,i){h+='<tr><td><span class="sc s'+i+'">'+esc(nm)+'</span></td><td class="n">'+num(tot[i])+'</td><td class="n">'+(som?(tot[i]*100/som).toFixed(1).replace('.',','):'0')+'%</td><td><div class="bar" style="margin:4px 0"><i style="width:'+(som?tot[i]*100/som:0)+'%;background:'+(i===4?'var(--late)':i===2?'var(--ok)':'var(--accent)')+'"></i></div></td></tr>';});
   h+='</tbody></table></div></div>';
   var ult=[];
-  Object.keys(S).forEach(function(k){if(S[k].at)ult.push({at:S[k].at,by:S[k].by,id:k,tp:'conclusão'});});
-  Object.keys(C).forEach(function(k){if(C[k].at)ult.push({at:C[k].at,by:C[k].by,id:k.split('__')[0],tp:'avaliação de críticas'});});
+  if(db&&db.fb&&LOGS.length)h+=logsHtml();
+  else Object.keys(S).forEach(function(k){if(S[k].at)ult.push({at:S[k].at,by:S[k].by,id:k,tp:'conclusão'});});
+  if(ult.length)Object.keys(C).forEach(function(k){if(C[k].at)ult.push({at:C[k].at,by:C[k].by,id:k.split('__')[0],tp:'avaliação de críticas'});});
   ult.sort(function(a,b){return a.at<b.at?1:-1;});
   if(ult.length){
     h+='<div class="card" style="margin-top:14px"><div class="ch"><b>Últimas atualizações</b><span class="meta">registro do que a equipe marcou</span></div><div style="padding:10px 16px 14px"><ul class="feed">';
@@ -1118,6 +1177,7 @@ async function importarConf(files){
   render();
   if(ids.length&&db&&db.fb)stmsg('Salvando a análise para a equipe…');
   var salvo=await salvarConf(ids);
+  if(ids.length)registrar('conferiu',null,tt.R+tt.N+tt.I,ids.length+(ids.length===1?' competência':' competências'));
   stmsg('Conferência: '+ns+' SPED e '+nx+' XML lidos. '+(ids.length?num(tt.R+tt.N+tt.I)+' críticas conferidas em '+ids.length+(ids.length===1?' competência: ':' competências: ')+num(tt.R)+' confirmadas, '+num(tt.N)+' não confirmadas e '+num(tt.I)+' inconclusivas.':'Nenhuma competência do quadro tem SPED importado: confira a inscrição estadual e o período do arquivo.')+
     (fora?' '+fora+' SPED de empresa ou mês que não está no quadro.':'')+(semdet?' '+semdet+' SPED de competência sem detalhe nota a nota.':'')+(ign?' '+ign+(ign===1?' arquivo ignorado.':' arquivos ignorados.'):'')+salvo,!ids.length);
 }
@@ -1128,6 +1188,8 @@ var fmapa={q:'',w:'',s:''};
 // Ordem da tabela: 'e' empresa, 'v' valor em aberto, 1 a 12 o mês. Clicar de novo no mesmo cabeçalho inverte.
 var omapa={k:'e',d:1};
 // Peso do mês na ordenação: em aberto pesa pela quantidade de críticas; abaixo vêm concluída fora do prazo, concluída, sem pendência e fora do período.
+// Em andamento: competência em aberto em que alguma crítica já foi avaliada.
+function andando(t){var r=!done(t)&&resumo(t);return !!(r&&prog(r).av>0);}
 function pesoMes(t,dentro){return t?(done(t)?(foraPrazo(t)?-1:-2):t.q):dentro?-3:-4;}
 function thOrd(k,rot,cls){
   var at=omapa.k===k;
@@ -1146,7 +1208,7 @@ function mapa(){
   var L=Object.keys(por).map(function(k){return por[k];}).sort(function(a,b){return a.e.localeCompare(b.e);});
   var h='';
   Object.keys(anos).sort().forEach(function(a){
-    var R=anos[a],linhas='',ne=0,np=0,nc=0,nf=0,rows=[];
+    var R=anos[a],linhas='',ne=0,np=0,nc=0,nf=0,nan=0,rows=[];
     L.forEach(function(p){
       var ts=[];for(var i=1;i<=12;i++)if(p.c[a+'-'+i])ts.push(p.c[a+'-'+i]);
       if(!ts.length)return;
@@ -1157,6 +1219,9 @@ function mapa(){
       if(fmapa.s==='c'&&ab.length)return;
       if(fmapa.s==='f'&&!ts.some(foraPrazo))return;
       if(fmapa.s==='t'&&!ts.some(late))return;
+      if(fmapa.s==='e'&&!ts.some(andando))return;
+      if(fmapa.s==='n'&&!ts.some(function(t){var r=resumo(t);return !!(r&&r[7]);}))return;
+      nan+=ts.filter(andando).length;
       nf+=ts.filter(foraPrazo).length;
       ne++;np+=ts.length;nc+=ts.length-ab.length;
       ab.forEach(function(t){va+=t.v;});
@@ -1172,13 +1237,13 @@ function mapa(){
       for(var m=1;m<=12;m++){
         var t=p.c[a+'-'+m],ml=MES[m-1]+'/'+a;
         var rr=t&&!done(t)&&resumo(t);
-        if(t)linhas+='<td class="m"><button class="cel '+(done(t)?(foraPrazo(t)?'c f':'c'):'p')+'"'+(rr?' style="--p:'+prog(rr).p+'%"':'')+' data-cel="'+t.id+'" aria-label="'+ml+': '+num(t.q)+' críticas, '+brl(t.v)+', '+(done(t)?(foraPrazo(t)?'concluída fora do prazo':'concluída no prazo'):'em aberto')+'">'+(done(t)?'✓':abrev(t.q))+'</button></td>';
+        if(t)linhas+='<td class="m"><button class="cel '+(done(t)?(foraPrazo(t)?'c f':'c'):(andando(t)?'p em':'p'))+(rr&&rr[7]?' pe':'')+'"'+(rr?' style="--p:'+prog(rr).p+'%"':'')+' data-cel="'+t.id+'" aria-label="'+ml+': '+num(t.q)+' críticas, '+brl(t.v)+', '+(done(t)?(foraPrazo(t)?'concluída fora do prazo':'concluída no prazo'):andando(t)?'em andamento':'em aberto')+(rr&&rr[7]?', com crítica pendente de retorno':'')+'">'+(done(t)?'✓':abrev(t.q))+'</button></td>';
         else if(m>=R.ini&&m<=R.fim)linhas+='<td class="m"><span class="cel l" role="img" data-mes="'+ml+'" aria-label="'+ml+': sem pendência"></span></td>';
         else linhas+='<td class="m"><span class="cel x" role="img" data-fora="'+ml+'" aria-label="'+ml+': fora do período analisado">–</span></td>';
       }
       linhas+='<td class="n">'+(ab.length?brlc(va):'—')+'<small>'+(ts.length-ab.length)+' de '+ts.length+' concluídas</small></td></tr>';
     });
-    h+='<div class="card"><div class="ch"><b class="ano">'+a+'</b><span class="meta">'+ne+(ne===1?' empresa':' empresas')+' · '+np+' meses com pendência · '+nc+' concluídos'+(nf?' ('+nf+' fora do prazo)':'')+' · malha de '+MES[R.ini-1]+' a '+MES[R.fim-1]+'</span></div>';
+    h+='<div class="card"><div class="ch"><b class="ano">'+a+'</b><span class="meta">'+ne+(ne===1?' empresa':' empresas')+' · '+np+' meses com pendência · '+nc+' concluídos'+(nf?' ('+nf+' fora do prazo)':'')+' · '+nan+' em andamento · malha de '+MES[R.ini-1]+' a '+MES[R.fim-1]+'</span></div>';
     h+=linhas?'<div class="scroll"><table class="big mapa"><thead><tr>'+thOrd('e','Empresa','')+MES.map(function(x,i){return i+1>=R.ini&&i+1<=R.fim?thOrd(i+1,x,'m'):'<th class="m">'+x+'</th>';}).join('')+thOrd('v','Em aberto','n')+'</tr></thead><tbody>'+linhas+'</tbody></table></div></div>':'<div class="empty">Nenhuma empresa com esses filtros.</div></div>';
   });
   document.getElementById('mapas').innerHTML=h;
@@ -1196,7 +1261,8 @@ function tipDe(c){
     if(S[id].ajustePor)h+='<br>'+ajusteTxt(S[id]);
     if(foraPrazo(t))h+='<br>Fora do prazo: '+pl(ndias(t.d,dloc(f)),'dia depois','dias depois')+' do previsto ('+fdata(t.d)+')';
   }else h+=(late(t)?'Atrasada há '+pl(ndias(t.d,HOJE),'dia','dias'):'Em aberto')+' · prevista para '+fdata(t.d)+' ('+esc(t.w)+')';
-  if(r){var g=prog(r);h+='<br>'+num(g.av)+' de '+num(g.tot)+' críticas avaliadas ('+g.p+'%)';}
+  if(r){var g=prog(r);h+='<br>'+num(g.av)+' de '+num(g.tot)+' críticas avaliadas ('+g.p+'%)';
+    if(!done(t)&&r.pd)h+='<br>'+num(r.pd)+(r.pd===1?' crítica ainda pede ação':' críticas ainda pedem ação')+(r[7]?' · '+num(r[7])+(r[7]===1?' marcada como Pendente':' marcadas como Pendente'):'');}
   var cf=CONF[id];
   if(cf)h+='<br>SPED: '+cfRes(cf.n);
   return h;
@@ -1239,7 +1305,7 @@ async function sincronizar(){
   try{
     for(var k in S)await gravarStatus(k);
     for(var c in C)await db.doc('criticas/'+c).set(C[c]);
-    stmsg('Andamento importado e enviado para a equipe.');
+    registrar('importou',null,0,'');stmsg('Andamento importado e enviado para a equipe.');
   }catch(e){stmsg('Importado aqui, mas não foi possível enviar para a equipe ('+e.code+').',true);}
 }
 /* Planilha Excel de verdade (.xlsx): a chave de 44 dígitos vai como texto, sem virar notação científica como acontece no CSV. */
@@ -1561,6 +1627,8 @@ document.getElementById('fmw').innerHTML='<option value="">Todos os responsávei
 document.getElementById('ft').textContent='Valores conferidos nos PDFs e prints da SEFAZ · plano com 2 competências por colaborador por dia, em dias úteis (sem 12/10, 02/11 e 20/11) · gerado em '+D.ger+'.';
 document.getElementById('bdemp').textContent=T.map(function(t){return t.e+'|'+t.ie;}).filter(function(x,i,a){return a.indexOf(x)===i;}).length;
 try{if(localStorage.getItem(LK+'-menu')){document.getElementById('side').classList.add('rec');document.getElementById('recolher').textContent='»';}}catch(e){}
+// "Ativo agora" depende do relógio: o Painel é redesenhado a cada minuto enquanto está na tela.
+setInterval(function(){if(db&&db.fb&&!document.getElementById('painel').classList.contains('hide')&&!pend)painel();},60000);
 chips();render();iniciar();
 })();
 </script>
