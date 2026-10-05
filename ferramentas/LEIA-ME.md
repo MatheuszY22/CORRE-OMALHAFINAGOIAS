@@ -47,8 +47,10 @@ processamento, CNPJ/CPF, valor, cancelada, número e série).
 Para incluir um mês inteiro que ainda não está no quadro (as competências
 entram no cronograma depois do que já está marcado, 2 por dia útil):
 
-```ninode incluir-mes.js ..\index.html lidos.json 05/10/2026 092026
-```n
+```
+node incluir-mes.js ..\index.html lidos.json 05/10/2026 092026
+```
+
 Depois ajuste à mão, no `index.html`, o subtítulo com o período das
 competências e a data de fim do plano que o script imprime.
 
