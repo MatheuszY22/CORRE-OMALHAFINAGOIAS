@@ -229,7 +229,8 @@ button.kpi{display:block;width:100%;text-align:left;font:inherit;color:inherit;c
 button.kpi span{display:block}
 button.kpi:hover{border-color:var(--accent)}
 button.kpi .l::after{content:'›';float:right;font-size:15px;line-height:.8;color:var(--muted2)}
-.pc [data-rel],table.big tr[data-rel],#relb tr[data-ir]{cursor:pointer}
+.pc [data-rel],table.big tr[data-rel],#relb tr[data-ir],tr[data-atv]{cursor:pointer}
+tr[data-atv]:hover td{background:var(--hover)}
 .pc .n[data-rel]:hover,.pc .row[data-rel]:hover b{text-decoration:underline}
 table.big tr[data-rel]:hover td,#relb tr[data-ir]:hover td{background:var(--hover)}
 #rel{position:fixed;inset:0;z-index:55;display:flex;align-items:flex-start;justify-content:center;padding:5vh 14px;background:rgba(12,19,48,.62)}
@@ -513,7 +514,8 @@ function tarefa(id){return T.filter(function(x){return x.id===id;})[0];}
 function atividadeHtml(){
   var agora=Date.now(),por={};
   Object.keys(ATIV).forEach(function(em){
-    var a=ATIV[em],k=a.sou||a.nome||NOMES[em]||em.split('@')[0],o=por[k]=por[k]||{n:0,hoje:0,ult:0};
+    var a=ATIV[em],k=a.sou||a.nome||NOMES[em]||em.split('@')[0],o=por[k]=por[k]||{n:0,hoje:0,ult:0,emails:[]};
+    o.emails.push(em);
     o.n+=a.total||0;o.hoje+=(a.dias&&a.dias[HOJE])||0;
     var u=a.ult&&a.ult.toDate?a.ult.toDate().getTime():(a.ult?agora:0);if(u>o.ult)o.ult=u;
   });
@@ -525,8 +527,8 @@ function atividadeHtml(){
   }).sort(function(a,b){return b.o.ult-a.o.ult||a.k.localeCompare(b.k);});
   return '<div class="card" style="margin-bottom:14px"><div class="ch"><b>Atividade da equipe</b><span class="meta">'+ativos+(ativos===1?' pessoa ativa':' pessoas ativas')+' agora · '+num(th)+(th===1?' ação hoje':' ações hoje')+' · '+num(tn)+' no total</span></div>'+
     '<div class="scroll"><table class="big"><thead><tr><th>Colaborador</th><th>Situação</th><th>Última atividade</th><th class="n">Ações hoje</th><th class="n">Ações no total</th></tr></thead><tbody>'+
-    rows.map(function(x){return '<tr><td>'+esc(x.k)+'</td><td><span class="atv '+x.sit[0]+'">'+x.sit[1]+'</span></td><td>'+(x.o.ult?dhora(new Date(x.o.ult)):'—')+'</td><td class="n">'+num(x.o.hoje)+'</td><td class="n">'+num(x.o.n)+'</td></tr>';}).join('')+
-    '</tbody></table></div><p class="note" style="padding:8px 16px 12px;margin:0">Ativo agora = alguma alteração nos últimos 10 minutos. Uma ação é cada marcação gravada: concluir, avaliar, anotar, marcar em lote, conferir com o SPED.</p></div>';
+    rows.map(function(x){return '<tr data-atv="'+esc(x.k)+'" data-em="'+esc((x.o.emails||[]).join(' '))+'" tabindex="0"><td>'+esc(x.k)+'</td><td><span class="atv '+x.sit[0]+'">'+x.sit[1]+'</span></td><td>'+(x.o.ult?dhora(new Date(x.o.ult)):'—')+'</td><td class="n">'+num(x.o.hoje)+'</td><td class="n">'+num(x.o.n)+'</td></tr>';}).join('')+
+    '</tbody></table></div><p class="note" style="padding:8px 16px 12px;margin:0">Ativo agora = alguma alteração nos últimos 10 minutos. Uma ação é cada marcação gravada: concluir, avaliar, anotar, marcar em lote, conferir com o SPED. Clique no colaborador para ver em quais empresas ele mexeu.</p></div>';
 }
 function logsHtml(){
   return '<div class="card" style="margin-top:14px"><div class="ch"><b>Últimas alterações</b><span class="meta">as '+LOGS.length+' mais recentes, em tempo real</span></div><div style="padding:10px 16px 14px"><ul class="feed">'+
@@ -598,6 +600,7 @@ async function conectarEquipe(){
     inc:function(n){return s.increment(n);},
     log:function(o){return s.addDoc(s.collection(fdb,'malha_log'),o);},
     recentes:function(n,lim,ok,err){return s.onSnapshot(s.query(s.collection(fdb,'malha_'+n),s.orderBy('em','desc'),s.limit(lim)),ok,err);},
+    buscar:function(n,campo,valor,lim){return s.getDocs(s.query(s.collection(fdb,'malha_'+n),s.where(campo,'==',valor),s.limit(lim))).then(function(q){return q.docs.map(function(d){return {id:d.id,data:d.data()};});});},
     collection:function(n){return {onSnapshot:function(ok,err){return s.onSnapshot(s.collection(fdb,'malha_'+n),ok,err);}};}};
   uid=mail;
   U={id:function(){return Promise.resolve(mail);},can:function(){return Promise.resolve(true);},
@@ -1451,12 +1454,34 @@ function relatorio(k,w,sem){
   }
   if(w)tit+=' — '+w;
   ts.forEach(function(t){vt+=t.v;});
-  REL={k:k,w:w,sem:sem,tit:tit,cab:cab,lin:lin};
-  document.getElementById('relt').textContent=tit;
-  document.getElementById('rels').textContent=pl(ts.length,'competência','competências')+' · '+brl(vt);
-  document.getElementById('relb').innerHTML=ts.length?'<table class="big"><thead><tr>'+cab.map(function(c){return '<th'+(c==='Valor'?' class="n"':'')+'>'+c+'</th>';}).join('')+'</tr></thead><tbody>'+
-    lin.map(function(l,i){return '<tr data-ir="'+ts[i].id+'" tabindex="0">'+l.map(function(c,j){return '<td'+(cab[j]==='Valor'?' class="n"':'')+'>'+esc(c)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>':'<div class="empty">Nenhuma competência nesta lista.</div>';
+  montarRel({k:k,w:w,sem:sem,tit:tit,res:pl(ts.length,'competência','competências')+' · '+brl(vt),cab:cab,lin:lin,ids:ts.map(function(t){return t.id;})});
+}
+function montarRel(R){
+  REL=R;
+  document.getElementById('relt').textContent=R.tit;
+  document.getElementById('rels').textContent=R.res;
+  document.getElementById('relb').innerHTML=R.lin.length?'<table class="big"><thead><tr>'+R.cab.map(function(c){return '<th'+(/^(Valor|Ações)$/.test(c)?' class="n"':'')+'>'+c+'</th>';}).join('')+'</tr></thead><tbody>'+
+    R.lin.map(function(l,i){return '<tr'+(R.ids[i]?' data-ir="'+R.ids[i]+'"':'')+' tabindex="0">'+l.map(function(c,j){return '<td'+(/^(Valor|Ações)$/.test(R.cab[j])?' class="n"':'')+'>'+esc(c)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(R.vazio||'Nenhuma competência nesta lista.')+'</div>';
   document.getElementById('rel').classList.remove('hide');
+}
+// Empresas e competências em que um colaborador mexeu, pelo histórico (busca por nome escolhido em "Sou" e pelos e-mails dele).
+async function relAtividade(nome,emails){
+  montarRel({k:'u',w:nome,tit:'Atividade de '+nome,res:'carregando o histórico…',cab:[],lin:[],ids:[]});
+  var vistos={},regs=[];
+  function junta(l){l.forEach(function(d){if(!vistos[d.id]){vistos[d.id]=1;regs.push(d.data);}});}
+  try{
+    junta(await db.buscar('log','sou',nome,2000));
+    for(var i=0;i<emails.length;i++)junta(await db.buscar('log','por',emails[i],2000));
+  }catch(e){montarRel({k:'u',w:nome,tit:'Atividade de '+nome,res:'não foi possível ler o histórico ('+(e.code||e.message)+')',cab:[],lin:[],ids:[]});return;}
+  var por={};
+  regs.forEach(function(l){
+    var k=l.comp||'(geral)',o=por[k]=por[k]||{e:l.e||'Ações gerais (conferência com o SPED, envio de marcações)',r:l.r||'',n:0,ult:0,tipos:{}};
+    o.n++;var em=l.em&&l.em.toDate?l.em.toDate().getTime():Date.now();if(em>o.ult)o.ult=em;
+    var a=(ACAO[l.tipo]||l.tipo).replace('{n}',num(l.n||0)).replace(/\b1 críticas/,'1 crítica').replace('1 marcações feitas','1 marcação feita');o.tipos[a]=(o.tipos[a]||0)+1;
+  });
+  var ks=Object.keys(por).sort(function(a,b){return por[b].ult-por[a].ult;});
+  var lin=ks.map(function(k){var o=por[k];return [o.e,o.r,num(o.n),dhora(new Date(o.ult)),Object.keys(o.tipos).map(function(a){return (o.tipos[a]>1?o.tipos[a]+'× ':'')+a;}).join('; ')];});
+  montarRel({k:'u',w:nome,tit:'Atividade de '+nome,res:pl(regs.length,'ação registrada','ações registradas')+' em '+pl(ks.filter(function(k){return k!=='(geral)';}).length,'competência','competências'),cab:['Empresa','Competência','Ações','Última ação','O que fez'],lin:lin,ids:ks.map(function(k){return k==='(geral)'?'':k;}),vazio:'Nenhuma ação registrada para '+esc(nome)+'. O histórico começou em 05/10/2026.'});
 }
 function relCsv(){
   if(!REL)return;
@@ -1484,7 +1509,7 @@ function render(){
   if(ae&&ae.classList&&(ae.classList.contains('obs')||ae.classList.contains('obsn')||ae.classList.contains('mesn'))){pend=true;return;}
   pend=false;
   kpis();painel();mapa();lista();empresas();tipos();selos();
-  if(REL&&!document.getElementById('rel').classList.contains('hide')){var rb=document.getElementById('relb'),rs=rb.scrollTop;relatorio(REL.k,REL.w,REL.sem);rb.scrollTop=rs;}
+  if(REL&&REL.k!=='u'&&!document.getElementById('rel').classList.contains('hide')){var rb=document.getElementById('relb'),rs=rb.scrollTop;relatorio(REL.k,REL.w,REL.sem);rb.scrollTop=rs;}
   Object.keys(abertos).forEach(function(id){var b=document.querySelector('[data-det="'+id+'"]');if(b)abrir(b,true);});
 }
 function abrir(btn,forca){
@@ -1574,7 +1599,9 @@ document.addEventListener('click',function(e){
   if(e.target.id==='relx'||e.target.id==='rel'){document.getElementById('rel').classList.add('hide');return;}
   if(e.target.id==='relcsv'){relCsv();return;}
   var ir=e.target.closest('[data-ir]');
-  if(ir){document.getElementById('rel').classList.add('hide');irPara(ir.dataset.ir);return;}
+  if(ir){if(ir.dataset.ir){document.getElementById('rel').classList.add('hide');irPara(ir.dataset.ir);}return;}
+  var av=e.target.closest('tr[data-atv]');
+  if(av){relAtividade(av.dataset.atv,av.dataset.em?av.dataset.em.split(' '):[]);return;}
   var rl=e.target.closest('[data-rel]');
   if(rl){relatorio(rl.dataset.rel,rl.dataset.w||'',rl.dataset.sem||'');return;}
   var d=e.target.closest('[data-det]');if(d){abrir(d);return;}
@@ -1586,7 +1613,7 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape')document.getElementById('rel').classList.add('hide');
-  else if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[data-rel][tabindex],tr[data-ir],[data-tog]')){e.preventDefault();e.target.click();}
+  else if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[data-rel][tabindex],tr[data-ir],[data-tog],tr[data-atv]')){e.preventDefault();e.target.click();}
 });
 // O clique no "Replicar" não pode tirar o foco da anotação antes da hora: a lista é redesenhada ao sair do campo e o clique se perderia.
 document.addEventListener('mousedown',function(e){if(e.target.closest&&e.target.closest('[data-rep]'))e.preventDefault();});
