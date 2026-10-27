@@ -298,7 +298,7 @@ table.rott small.cR{color:var(--late)}table.rott small.cN{color:var(--ok)}table.
 .spn h4{margin:14px 0 6px;font-size:12.5px;color:var(--title)}.spn .tw{overflow:auto;border:1px solid var(--line);border-radius:8px}
 .spr{margin-top:12px}.spr summary{cursor:pointer;font-size:12.5px;color:var(--link)}.spr pre{margin:8px 0 0;padding:10px;background:var(--th);border-radius:8px;font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-all}
 .nt .spv{margin-top:4px}
-#cfg .card{margin-bottom:14px}#cfg .cfgl .row{display:flex;align-items:center;justify-content:space-between;padding:9px 18px;gap:10px;border-top:1px solid var(--line2)}#cfg .cfgl .row>span{flex:1}#cfg .cfgl .row .meta{color:var(--muted);font-size:12.5px;margin-left:6px}#cfg .cfgadd input{flex:1;margin:0;max-width:360px;font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}#cfg .cfgadd{justify-content:flex-start}
+#cfg .card{margin-bottom:14px}#cfg .cfgl .row{display:flex;align-items:center;justify-content:space-between;padding:9px 18px;gap:10px;border-top:1px solid var(--line2)}#cfg .cfgl .row>span{flex:1}#cfg .cfgc{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);white-space:nowrap;cursor:pointer}#cfg .cfgc input{margin:0}#cfg .cfgl .row .meta{color:var(--muted);font-size:12.5px;margin-left:6px}#cfg .cfgadd input{flex:1;margin:0;max-width:360px;font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}#cfg .cfgadd{justify-content:flex-start}
 #cfg .tw{overflow:auto}#cfg table.cfgt td{vertical-align:middle;font-size:12.5px}#cfg table.cfgt input[type=text],#cfg table.cfgt input:not([type]){width:100%;min-width:160px;font:inherit;font-size:12.5px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
 #cfg table.cfgt input[type=color]{width:34px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none}#cfg table.cfgt select{font:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
 #cfg .cfgf{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 18px}#cfg .cfgf .note{margin:0;flex:1;min-width:240px}#cfg .note{padding:0 2px}
@@ -573,6 +573,7 @@ var STN0=STN.slice(),STOFF={},STPEND={},STCOR={};
 function stIds(){var o=[];for(var i=1;i<STN.length;i++)if(!STOFF[i])o.push(i);return o;}
 function aplicarCfg(){
   AV=(CFG.av&&CFG.av.length?CFG.av:D.av).slice();
+  CONCW={};(CFG.avConc||[]).forEach(function(a){CONCW[a]=true;});
   var st=CFG.st||{},ids=Object.keys(st).map(Number).filter(function(x){return x>0;}),max=Math.max(STN0.length-1,ids.length?Math.max.apply(null,ids):0);
   STN=[];STOFF={};STPEND={};STCOR={};
   for(var i=0;i<=max;i++){var o=st[i]||{};STN[i]=o.n||STN0[i]||('Situação '+i);if(o.ativo===false)STOFF[i]=true;if(i>=STN0.length){STPEND[i]=!!o.pend;if(!o.n)STOFF[i]=true;}if(o.cor)STCOR[i]=o.cor;}
@@ -647,7 +648,10 @@ function abrirPop(b,foco){
 function semana(s){var d=dt(s),j=new Date(d);j.setDate(d.getDate()-(d.getDay()===0?6:d.getDay()-1));return j.toISOString().slice(0,10);}
 T.forEach(function(t){t.sem=semana(t.d);});
 var SEM=[];T.forEach(function(t){if(SEM.indexOf(t.sem)<0)SEM.push(t.sem);});SEM.sort();
+// CONCW: responsáveis cuja atribuição conclui a competência automaticamente (ex.: Antiga Contabilidade). Vem da configuração.
+var CONCW={};
 var done=function(t){return !!(S[t.id]&&S[t.id].done);};
+async function concluirDe(ts){for(var i=0;i<ts.length;i++)if(!done(ts[i]))await salvar(ts[i].id,{done:true,obs:(S[ts[i].id]&&S[ts[i].id].obs)||''});}
 // O plano aos sábados é uma fila, não um prazo: nada fica "atrasado" nem "fora do prazo". As funções ficam para o
 // histórico de ajustes de data, mas sempre respondem que está tudo no prazo.
 var late=function(t){return false;};
@@ -793,12 +797,12 @@ async function mudarResp(id,w){
   var t=tarefa(id);if(!t||AV.indexOf(w)<0||w===t.w)return;
   var antes=t.w,anterior=RESP[id];
   RESP[id]={w:w,por:uid||'',em:new Date().toISOString()};aplicarResp();
-  if(LOCAL){gravarLocal();render();stmsg(t.e+' '+t.r+': responsável passou de '+antes+' para '+w+' (só neste aparelho).');return;}
+  if(LOCAL){gravarLocal();render();stmsg(t.e+' '+t.r+': responsável passou de '+antes+' para '+w+' (só neste aparelho).');if(CONCW[w])await concluirDe([t]);return;}
   if(!db||!canWrite){RESP[id]=anterior;aplicarResp();return;}
   registrar('responsavel',t,0,'de '+antes+' para '+w);
-  try{await db.doc('resp/'+id).set({w:w,de:antes,por:uid||'',em:db.agora()});stmsg(t.e+' '+t.r+': responsável passou de '+antes+' para '+w+'.');}
-  catch(e){if(anterior)RESP[id]=anterior;else delete RESP[id];aplicarResp();stmsg('Não foi possível mudar o responsável ('+e.code+').',true);}
-  render();
+  try{await db.doc('resp/'+id).set({w:w,de:antes,por:uid||'',em:db.agora()});stmsg(t.e+' '+t.r+': responsável passou de '+antes+' para '+w+(CONCW[w]&&!done(t)?' e foi concluída automaticamente':'')+'.');}
+  catch(e){if(anterior)RESP[id]=anterior;else delete RESP[id];aplicarResp();stmsg('Não foi possível mudar o responsável ('+e.code+').',true);render();return;}
+  render();if(CONCW[w])await concluirDe([t]);
 }
 function atividadeHtml(){
   var agora=Date.now(),por={};
@@ -1124,7 +1128,7 @@ function configuracoes(){
   // responsáveis
   h+='<div class="card"><div class="ch"><b>Responsáveis</b><span class="meta">quem aparece nos filtros, no Painel e na troca de responsável</span></div><div class="cfgl">'+
     AV.map(function(a){var n=TALL.filter(function(t){return t.w===a&&!oculta(t.ie);}).length,ab=TALL.filter(function(t){return t.w===a&&!oculta(t.ie)&&!done(t);}).length;
-      return '<div class="row"><span><b>'+esc(a)+'</b> <span class="meta">'+n+(n===1?' competência':' competências')+(ab?' · '+ab+' em aberto':'')+'</span></span><button class="bt del" data-cfg-rmav="'+esc(a)+'">Remover</button></div>';}).join('')+
+      return '<div class="row"><span><b>'+esc(a)+'</b> <span class="meta">'+n+(n===1?' competência':' competências')+(ab?' · '+ab+' em aberto':'')+'</span></span><label class="cfgc" title="Toda competência atribuída a este responsável é marcada como concluída na hora (ex.: Antiga Contabilidade)"><input type="checkbox" data-cfg-avc="'+esc(a)+'"'+(CONCW[a]?' checked':'')+'> concluir automaticamente</label><button class="bt del" data-cfg-rmav="'+esc(a)+'">Remover</button></div>';}).join('')+
     '<div class="row cfgadd"><input id="cfgav" placeholder="Nome do novo responsável" maxlength="40"><button class="bt" data-cfg-addav="1">Adicionar</button></div></div></div>';
   // situações da crítica
   var fixoPend={1:1,5:1,7:1,6:1};
@@ -1165,6 +1169,7 @@ async function cfgRmAv(nome){
     registrar('responsavel',ts[0],ts.length,'de '+nome+' para '+sub+' ('+ts.length+' competências)');
   }
   await salvarCfg({av:outros},'responsável '+nome+' removido'+(ts.length?', competências com '+sub:''));
+  if(ts.length&&CONCW[sub]){stmsg('Concluindo as '+ts.length+' competências de '+sub+'…');await concluirDe(ts);stmsg(ts.length+' competências passaram para '+sub+' e foram concluídas automaticamente.');}
 }
 async function cfgSaveSt(){
   var st={},i,el;
@@ -2236,6 +2241,8 @@ document.addEventListener('change',function(e){
     var gid=e.target.dataset.grpsel,g=+e.target.dataset.g,n=NT[gid],mark=e.target.checked;
     n.r.forEach(function(r,i){if(r[0]===g){if(mark)SEL[selKey(gid,i)]=1;else delete SEL[selKey(gid,i)];}});render();return;}
   if(e.target.dataset.resp){mudarResp(e.target.dataset.resp,e.target.value);return;}
+  if(e.target.dataset.cfgAvc!=null){var nmc=e.target.dataset.cfgAvc,lc=(CFG.avConc||[]).filter(function(a){return a!==nmc;});if(e.target.checked)lc.push(nmc);
+    salvarCfg({avConc:lc},nmc+(e.target.checked?': concluir automaticamente ao atribuir':': deixa de concluir automaticamente')).then(function(ok){if(!ok||!e.target.checked)return;var ab=TALL.filter(function(t){return t.w===nmc&&!oculta(t.ie)&&!done(t);});if(ab.length&&confirm('Concluir agora as '+ab.length+' competências em aberto de '+nmc+'?'))concluirDe(ab);});return;}
   if(e.target.dataset.rotin!=null||e.target.dataset.rotef!=null||e.target.dataset.rotv!=null){
     var rel=document.getElementById('rot'),rt=tarefa(rel.dataset.id);if(!rt)return;
     var ri=e.target.dataset.rotin!=null?e.target.dataset.rotin:e.target.dataset.rotef!=null?e.target.dataset.rotef:e.target.dataset.rotv,ro2=(ROT[rt.id]=ROT[rt.id]||{}),o=ro2[ri]=ro2[ri]||{};
