@@ -283,6 +283,13 @@ button.cel:focus-visible{outline-offset:1px}
 #spv{position:fixed;inset:0;z-index:56;display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;background:rgba(12,19,48,.58)}
 #spvx{width:32px;height:32px;border:0;border-radius:8px;background:none;padding:0;font-size:22px;line-height:1;color:var(--muted);cursor:pointer}#spvx:hover{background:var(--hover);color:var(--fg)}
 #spvb{overflow:auto;padding:14px 18px 18px}
+#rot{position:fixed;inset:0;z-index:56;display:flex;align-items:flex-start;justify-content:center;padding:4vh 16px;background:rgba(12,19,48,.58)}
+#rot .relc{max-width:1380px}#rotx{width:32px;height:32px;border:0;border-radius:8px;background:none;padding:0;font-size:22px;line-height:1;color:var(--muted);cursor:pointer}#rotx:hover{background:var(--hover);color:var(--fg)}
+#rotb{overflow:auto;padding:14px 18px 18px}#rotb .tw{overflow:auto;border:1px solid var(--line);border-radius:8px}
+table.rott td{vertical-align:top;font-size:12.5px}table.rott tr.off td{opacity:.55}table.rott select{font:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
+table.rott input[type=number]{width:96px;font:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg);text-align:right}
+table.rott small.cR{color:var(--late)}table.rott small.cN{color:var(--ok)}table.rott small.cI{color:var(--warn)}
+.rotf{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:12px}.rotf .note{margin:0;flex:1;min-width:240px}
 .spc{padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:var(--th);margin-bottom:14px;font-size:13px}.spc .l{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:3px}.spc .cf{margin-top:8px}
 .spn{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
 .sph{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px;color:var(--muted);margin-bottom:10px}.sph b{font-family:var(--f-display);font-size:16px;color:var(--title)}
@@ -528,6 +535,10 @@ button.cel:focus-visible{outline-offset:1px}
  <div id="relb"></div>
  <p class="note" style="margin:0;padding:9px 16px;border-top:1px solid var(--line)">Clique em uma linha para abrir a competência no cronograma.</p>
 </div></div>
+<div id="rot" class="hide"><div class="relc" role="dialog" aria-modal="true" aria-labelledby="rott">
+ <div class="relh"><b id="rott"></b><span class="meta" id="rots"></span><button id="rotx" aria-label="Fechar">×</button></div>
+ <div id="rotb"></div>
+</div></div>
 <div id="spv" class="hide"><div class="relc" role="dialog" aria-modal="true" aria-labelledby="spvt">
  <div class="relh"><b id="spvt"></b><span class="meta" id="spvs"></span><button id="spvx" aria-label="Fechar">×</button></div>
  <div id="spvb"></div>
@@ -591,7 +602,7 @@ var DS=['dom','seg','ter','qua','qui','sex','sáb'];
 function dt(s){var p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
 function fdata(s){var d=dt(s);return DS[d.getDay()]+' '+s.slice(8)+'/'+s.slice(5,7);}
 function esc(s){var e=document.createElement('span');e.textContent=s;return e.innerHTML;}
-var ICO={"imp":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 15V4M7 9l5-5 5 5M5 20h14\"/></svg>","dl":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 4v11M7 10l5 5 5-5M5 20h14\"/></svg>","chk":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 4h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1m-7 9 2 2 4-4\"/></svg>","car":"<svg class=\"car\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m6 9 6 6 6-6\"/></svg>","entrar":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3\"/></svg>","sair":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9\"/></svg>"};
+var ICO={"rot":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2\"/></svg>","imp":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 15V4M7 9l5-5 5 5M5 20h14\"/></svg>","dl":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 4v11M7 10l5 5 5-5M5 20h14\"/></svg>","chk":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 4h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1m-7 9 2 2 4-4\"/></svg>","car":"<svg class=\"car\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m6 9 6 6 6-6\"/></svg>","entrar":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3\"/></svg>","sair":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9\"/></svg>"};
 function iniciais(n){var p=String(n||'?').trim().split(/\s+/);return ((p[0]||'?').charAt(0)+(p.length>1?p[p.length-1].charAt(0):'')).toUpperCase();}
 function avCls(n){var s=0;String(n||'').split('').forEach(function(c){s=(s*31+c.charCodeAt(0))%997;});return 'c'+(s%6+1);}
 // Menus suspensos (Exportar, Importar, Conferência): abrem pelo botão [data-pop], fecham ao clicar fora, com Esc ou ao rolar.
@@ -1191,7 +1202,7 @@ function detalhe(t){
     h+='<div class="dtools">';
     h+='<div class="cfbar dtr"><div class="mn"><button class="mbt" data-pop="x'+t.id+'" aria-haspopup="menu" aria-expanded="false" title="Exportar esta competência">'+ICO.dl+'<span>Exportar</span>'+ICO.car+'</button>'+
       '<div class="pop" id="pop-x'+t.id+'" role="menu" aria-label="Exportar"><div class="poph">Baixar</div><button class="bt dl" data-xls="'+t.id+'" role="menuitem">Planilha desta competência (Excel)</button><button class="bt dl" data-chv="'+t.id+'" role="menuitem">Chaves de todas as notas (TXT)</button>'+
-      (cf&&cf.r&&cf.n.I?'<button class="bt dl" data-chx="'+t.id+'" role="menuitem">Chaves das que precisam de XML (TXT)</button>':'')+'</div></div></div>';
+      (cf&&cf.r&&cf.n.I?'<button class="bt dl" data-chx="'+t.id+'" role="menuitem">Chaves das que precisam de XML (TXT)</button>':'')+'</div></div><button class="mbt" data-rot="'+t.id+'" title="Roteiro de correção e simulação da apuração do ICMS">'+ICO.rot+'<span>Roteiro</span></button></div>';
     if(cf&&!cf.r)carregarConf(t.id);
     var cm='<div class="poph">Conferência com o SPED</div><button class="bt" data-cfimp="1" role="menuitem">Importar SPED / XML</button>';
     if(cf&&cf.r&&(cf.n.R||cf.n.N||cf.n.I))cm+='<div class="popsep"></div><div class="poph">Aplicar o resultado</div>'+
@@ -1312,7 +1323,7 @@ function arr2(v){return Math.round(v*100)/100;}
 function cfRes(n){return n.R+(n.R===1?' confirmada':' confirmadas')+' · '+n.N+(n.N===1?' não confirmada':' não confirmadas')+' · '+n.I+(n.I===1?' inconclusiva':' inconclusivas');}
 function dvOk(ch){var s=0,p=2;for(var i=42;i>=0;i--){s+=(+ch.charAt(i))*p;p=p===9?2:p+1;}var r=s%11;return (r<2?0:11-r)===+ch.charAt(43);}
 function lerSped(txt){
-  var cab=null,part={},pnome={},itens={},idx={},nota=null,n=0,p=txt.charCodeAt(0)===0xFEFF?1:0,q,ln,f,reg;
+  var cab=null,part={},pnome={},itens={},idx={},apur={},nota=null,n=0,p=txt.charCodeAt(0)===0xFEFF?1:0,q,ln,f,reg;
   while(p<txt.length){
     q=txt.indexOf('\n',p);if(q<0)q=txt.length;
     ln=txt.substring(p,q);p=q+1;
@@ -1326,6 +1337,12 @@ function lerSped(txt){
       if(nota.ch.length===44)(idx[nota.ch]=idx[nota.ch]||[]).push(nota);
     }else if(nota&&reg.charCodeAt(0)===67&&reg.charAt(1)==='1'){
       nota.lns.push(ln); // C110…C197: filhos do C100 (itens, totais, observações)
+    }else if(reg==='E110'){
+      apur.e110=ln.split('|');
+    }else if(reg==='E100'){
+      apur.e100=ln.split('|');
+    }else if(reg==='E116'){
+      (apur.e116=apur.e116||[]).push(ln.split('|'));
     }else if(reg==='0150'){
       f=ln.split('|');part[f[2]]=(f[5]||f[6]||'').replace(/\D/g,'');pnome[f[2]]=f[3]||'';
     }else if(reg==='0200'){
@@ -1335,7 +1352,93 @@ function lerSped(txt){
     }
   }
   if(!cab||cab.ini.length!==8)return null;
-  return {cab:cab,ie:cab.ie,per:cab.ini.slice(2),idx:idx,part:part,pnome:pnome,itens:itens,n:n};
+  return {cab:cab,ie:cab.ie,per:cab.ini.slice(2),idx:idx,part:part,pnome:pnome,itens:itens,apur:apur,n:n};
+}
+/* ---------- roteiro de correção e simulação da apuração ----------
+   Para cada crítica, a correção sugerida por tipo e o efeito na apuração do ICMS (débito/crédito). O efeito é
+   só uma simulação sobre o E110 do SPED importado: nada é gravado no SPED nem no sistema contábil. */
+var EFN={'':'Nenhum','d+':'Debitar','d-':'Estornar débito','c+':'Creditar','c-':'Estornar crédito'};
+var RK='malha-rot',ROT={};
+try{ROT=JSON.parse(localStorage.getItem(RK)||'{}');}catch(e){ROT={};}
+function gravarRot(){try{localStorage.setItem(RK,JSON.stringify(ROT));}catch(e){}}
+function regraCrit(tipo,op,r,c,x,dupVi){
+  var ent=op==='Entrada',val=r[2],vi=c?c.vi:0,nvi=x&&x.vi!=null?x.vi:null,d=nvi!=null&&c?nvi-vi:null;
+  if(/valor diferente ou incorreto de ICMS/i.test(tipo)){
+    if(!c)return {corr:'Nota não encontrada no SPED importado: escriturar com o ICMS da nota',ef:'',v:val};
+    if(ent){
+      if(vi===0)return {corr:'Sem crédito no SPED (uso/consumo?): manter crédito zero e informar o ICMS da nota ('+brl(nvi!=null?nvi:val)+') no C100',ef:'',v:0};
+      if(d!=null&&d<0)return {corr:'Crédito ('+brl(vi)+') maior que o ICMS da nota ('+brl(nvi)+'): estornar a diferença',ef:'c-',v:-d};
+      if(d!=null&&d>0)return {corr:'Crédito ('+brl(vi)+') menor que o ICMS da nota ('+brl(nvi)+'): creditar só se a operação der direito',ef:'',v:d};
+      return {corr:'ICMS escriturado '+brl(vi)+' diferente da nota: ajustar para o ICMS da nota (importe o XML para o valor exato)',ef:'',v:val};
+    }
+    if(vi===0)return {corr:'Saída sem ICMS no SPED: lançar o ICMS destacado na nota ('+brl(nvi!=null?nvi:val)+')',ef:'d+',v:nvi!=null?nvi:val};
+    if(d!=null)return d>0?{corr:'Débito ('+brl(vi)+') menor que o ICMS da nota ('+brl(nvi)+'): ajustar',ef:'d+',v:d}:d<0?{corr:'Débito ('+brl(vi)+') maior que o ICMS da nota ('+brl(nvi)+'): ajustar',ef:'d-',v:-d}:{corr:'ICMS igual ao da nota: conferir base e CST',ef:'',v:0};
+    return {corr:'ICMS escriturado '+brl(vi)+' diferente da nota: ajustar para o ICMS da nota (importe o XML para o valor exato)',ef:'',v:val};
+  }
+  if(/duplicada/i.test(tipo))return dupVi!=null?{corr:'Excluir a escrituração duplicada (manter um C100)',ef:dupVi?(ent?'c-':'d-'):'',v:dupVi}:{corr:'Excluir a escrituração duplicada'+(c?' — no SPED importado há só uma escrituração':''),ef:'',v:0};
+  if(/não escriturada/i.test(tipo))return ent?{corr:'Escriturar a nota de entrada (C100/C170/C190); crédito só se a operação der direito',ef:'',v:nvi!=null?nvi:0}:{corr:'Escriturar a nota de saída com o ICMS destacado'+(nvi!=null?' ('+brl(nvi)+')':' (importe o XML para o valor)'),ef:nvi?'d+':'',v:nvi!=null?nvi:0};
+  if(/status dif/i.test(tipo))return {corr:'Nota cancelada/denegada escriturada: excluir do SPED (ou COD_SIT 02, sem valores)',ef:c&&vi?(ent?'c-':'d-'):'',v:vi};
+  if(/mês divergente/i.test(tipo))return {corr:'Escriturar na competência correta e retirar desta',ef:c&&vi?(ent?'c-':'d-'):'',v:vi};
+  if(/tipo de operação/i.test(tipo))return {corr:'Corrigir o tipo de operação / CFOP (entrada × saída)',ef:'',v:0};
+  if(/valor diferente da Nota/i.test(tipo))return {corr:'Corrigir o valor do documento (C100 VL_DOC) para o da nota',ef:'',v:0};
+  if(/sem NFE correspondente|outro contribuinte/i.test(tipo))return {corr:'Excluir o registro: nota inexistente ou de outro contribuinte',ef:c&&vi?(ent?'c-':'d-'):'',v:vi};
+  return {corr:'Avaliar caso a caso',ef:'',v:0};
+}
+// E110: 2 débitos, 3 aj. débitos, 4 tot. aj. débitos, 5 estornos de crédito, 6 créditos, 7 aj. créditos, 8 tot. aj. créditos,
+// 9 estornos de débito, 10 saldo credor anterior, 11 saldo apurado, 12 deduções, 13 a recolher, 14 saldo credor a transportar
+function apurar(f,dD,dC){
+  var deb=f[2]+dD,cred=f[6]+dC,sal=deb+f[3]+f[4]+f[5]-cred-f[7]-f[8]-f[9]-f[10];
+  return {deb:deb,cred:cred,sal:sal,rec:sal>0?Math.max(0,sal-f[12]):0,tr:sal<0?-sal:0};
+}
+function rotLinhas(t,s){
+  var n=NT[t.id],cf=CONF[t.id],R=ROT[t.id]||{},L=[];
+  n.r.forEach(function(r,i){
+    var tp=n.t[r[0]],st=cst(t.id,i),v=cf&&cf.r&&cf.r[i],ch=String(r[3]),ns=s&&s.idx[ch]||[],c=ns[0]||null,x=XMLS[ch]||null;
+    var reg=regraCrit(tp[0],tp[1],r,c,x,ns.length>1?ns[1].vi:null),o=R[i]||{};
+    var inc=o.in!=null?o.in:((st.s|0)===1||(v&&v[0]==='R')),ef=o.ef!=null?o.ef:reg.ef,val=o.v!=null?o.v:reg.v;
+    L.push({i:i,r:r,tp:tp,st:st,v:v,c:c,x:x,reg:reg,inc:inc,ef:ef,val:+val||0});
+  });
+  return L;
+}
+async function roteiro(id){
+  var t=tarefa(id);if(!t||!NT[t.id])return;
+  var el=document.getElementById('rot');
+  document.getElementById('rott').textContent='Roteiro de correção · '+t.e+' · '+t.r;document.getElementById('rots').textContent='';
+  document.getElementById('rotb').innerHTML='<div class="empty">Montando o roteiro…</div>';el.classList.remove('hide');document.getElementById('rotx').focus();
+  await carregarConf(id,true);
+  var s=null;try{s=await spedDe(t);}catch(e){}
+  el.dataset.id=id;el.dataset.sped=s?'1':'';
+  rotRender(t,s);
+}
+function rotRender(t,s){
+  var L=rotLinhas(t,s),inc=L.filter(function(l){return l.inc;}),dD=0,dC=0;
+  inc.forEach(function(l){if(l.ef==='d+')dD+=l.val;else if(l.ef==='d-')dD-=l.val;else if(l.ef==='c+')dC+=l.val;else if(l.ef==='c-')dC-=l.val;});
+  var e110=s&&s.apur&&s.apur.e110,f=e110?e110.map(function(x){return nsp(x);}):null,h='';
+  document.getElementById('rots').textContent=inc.length+' de '+L.length+' críticas no roteiro'+(s?' · '+(s.cab.fin==='1'?'SPED retificador':'SPED original')+' de '+t.r:' · sem SPED neste aparelho');
+  if(f){
+    var a=apurar(f,0,0),b=apurar(f,dD,dC),dif=function(x,y,rec){var d=y-x;return d?'<b'+(rec?' class="'+(d>0?'c-bad':'c-ok')+'"':'')+'>'+(d>0?'+':'−')+brl(Math.abs(d))+'</b>':'—';};
+    h+='<div class="spn"><div class="sph"><b>Apuração do ICMS (E110)</b><span>'+(s.apur.e100?'período '+dsp(s.apur.e100[2])+' a '+dsp(s.apur.e100[3]):'')+'</span><span class="tag">simulação: nada é gravado</span></div>'+
+      '<div class="tw"><table class="big"><thead><tr><th></th><th class="n">No SPED</th><th class="n">Com as correções</th><th class="n">Diferença</th></tr></thead><tbody>'+
+      [['Débitos (saídas)',f[2],b.deb],['Ajustes e estornos a débito',f[3]+f[4]+f[5],f[3]+f[4]+f[5]],['Créditos (entradas)',f[6],b.cred],['Ajustes e estornos a crédito',f[7]+f[8]+f[9],f[7]+f[8]+f[9]],['Saldo credor do período anterior',f[10],f[10]],['Saldo apurado',f[11],b.sal],['Deduções',f[12],f[12]],['<b>ICMS a recolher</b>',f[13],b.rec,1],['Saldo credor a transportar',f[14],b.tr]].map(function(l){return '<tr><td>'+l[0]+'</td><td class="n">'+brl(l[1])+'</td><td class="n">'+brl(l[2])+'</td><td class="n">'+dif(l[1],l[2],l[3])+'</td></tr>';}).join('')+'</tbody></table></div>'+
+      (Math.abs(a.rec-f[13])>0.05||Math.abs(a.tr-f[14])>0.05?'<p class="note">O saldo recalculado pelas regras do E110 não bate com o informado no arquivo ('+brl(a.rec)+' a recolher / '+brl(a.tr)+' a transportar): confira o SPED no PVA.</p>':'')+
+      '<p class="note">Débitos +'+brl(Math.max(0,dD))+' −'+brl(Math.max(0,-dD))+' · Créditos +'+brl(Math.max(0,dC))+' −'+brl(Math.max(0,-dC))+'. Estornos entram aqui direto no total; no retificador eles vão como ajuste (E111) ou pela nota corrigida.</p></div>';
+  }else h+='<div class="spc"><span class="l">Apuração</span>'+(s?'Este SPED não tem o registro E110.':'Importe o SPED desta competência (botão Importar) para simular a apuração com as correções.')+'</div>';
+  h+='<div class="tw"><table class="big rott"><thead><tr><th>No roteiro</th><th>NF</th><th>Crítica</th><th>Situação</th><th>No SPED</th><th class="n">Apontado</th><th>Correção sugerida</th><th>Efeito na apuração</th><th class="n">Valor</th></tr></thead><tbody>'+
+    L.map(function(l){var c=l.c;return '<tr class="'+(l.inc?'':'off')+'"><td><input type="checkbox" data-rotin="'+l.i+'"'+(l.inc?' checked':'')+' aria-label="Incluir no roteiro"></td><td><b>'+esc(l.r[1])+'</b><br><small class="chv">'+esc(String(l.r[3]).slice(-12))+'</small></td><td>'+esc(l.tp[0])+'<br><small>'+esc(l.tp[1])+'</small></td><td>'+esc(STN[l.st.s|0])+(l.v?'<br><small class="c'+l.v[0]+'">'+CFN[l.v[0]]+'</small>':'')+'</td>'+
+      '<td>'+(c?'CFOP '+esc(c.cf.join(', ')||'—')+'<br><small>ICMS '+brl(c.vi)+(s&&s.idx[String(l.r[3])].length>1?' · '+s.idx[String(l.r[3])].length+' escriturações':'')+'</small>':s?'<small>não escriturada</small>':'—')+'</td><td class="n">'+brl(l.r[2])+'</td><td>'+esc(l.reg.corr)+'</td>'+
+      '<td><select data-rotef="'+l.i+'">'+Object.keys(EFN).map(function(k){return '<option value="'+k+'"'+(k===l.ef?' selected':'')+'>'+EFN[k]+'</option>';}).join('')+'</select></td><td class="n"><input type="number" step="0.01" min="0" data-rotv="'+l.i+'" value="'+(l.val||0).toFixed(2)+'"></td></tr>';}).join('')+'</tbody></table></div>'+
+    '<div class="rotf"><button class="bt" data-rotxls="'+t.id+'">Baixar roteiro (Excel)</button><span class="note">A correção sugerida segue regras por tipo de crítica; o efeito e o valor podem ser trocados linha a linha e ficam guardados neste aparelho. A correção é feita no sistema contábil, que gera o retificador.</span></div>';
+  document.getElementById('rotb').innerHTML=h;
+}
+async function rotXls(id){
+  var t=tarefa(id),s=null;try{s=await spedDe(t);}catch(e){}
+  var L=rotLinhas(t,s),cab=['Empresa','IE','Competência','No roteiro','NF','Chave','Tipo de crítica','Operação','Situação da crítica','Conferência','CFOP no SPED','ICMS no SPED','Valor apontado','Correção sugerida','Efeito na apuração','Valor do efeito'];
+  var lin=L.map(function(l){return [t.e,t.ie,t.r,l.inc?'Sim':'Não',l.r[1],String(l.r[3]),l.tp[0],l.tp[1],STN[l.st.s|0],l.v?CFN[l.v[0]]:'',l.c?l.c.cf.join(', '):'',l.c?l.c.vi:'',l.r[2],l.reg.corr,EFN[l.ef],l.val];});
+  var e110=s&&s.apur&&s.apur.e110;
+  if(e110){var f=e110.map(function(x){return nsp(x);}),dD=0,dC=0;L.forEach(function(l){if(!l.inc)return;if(l.ef==='d+')dD+=l.val;else if(l.ef==='d-')dD-=l.val;else if(l.ef==='c+')dC+=l.val;else if(l.ef==='c-')dC-=l.val;});var b=apurar(f,dD,dC);
+    lin.push([]);lin.push(['Apuração (E110)','','','','','','','','','','','No SPED','Com as correções']);
+    [['Débitos',f[2],b.deb],['Créditos',f[6],b.cred],['Saldo apurado',f[11],b.sal],['ICMS a recolher',f[13],b.rec],['Saldo credor a transportar',f[14],b.tr]].forEach(function(l){lin.push([l[0],'','','','','','','','','','',l[1],l[2]]);});}
+  await baixarXlsx('roteiro-'+id+'.xlsx','Roteiro',[cab].concat(lin));
 }
 /* ---------- SPED guardado no navegador e visualizador por nota ---------- */
 // O .txt importado fica no IndexedDB deste aparelho (índice em localStorage) para abrir a nota depois, sem reimportar.
@@ -1947,6 +2050,11 @@ document.addEventListener('click',function(e){
   if(exc){excluirEmpresa(exc.dataset.exc,false);return;}
   var rst=e.target.closest('[data-rest]');
   if(rst){excluirEmpresa(rst.dataset.rest,true);return;}
+  var ro=e.target.closest('[data-rot]');
+  if(ro){roteiro(ro.dataset.rot);return;}
+  var rx=e.target.closest('[data-rotxls]');
+  if(rx){rotXls(rx.dataset.rotxls);return;}
+  if(e.target.id==='rotx'||e.target.id==='rot'){document.getElementById('rot').classList.add('hide');return;}
   var sv=e.target.closest('[data-spv]');
   if(sv){verSped(sv.dataset.spv,sv.dataset.ch);return;}
   if(e.target.id==='spvx'||e.target.id==='spv'){document.getElementById('spv').classList.add('hide');return;}
@@ -1994,6 +2102,7 @@ document.addEventListener('keydown',function(e){
     var ab=document.querySelector('[data-pop][aria-expanded="true"]');
     if(ab){fecharPops();ab.focus();return;}
     if(!document.getElementById('spv').classList.contains('hide')){document.getElementById('spv').classList.add('hide');return;}
+    if(!document.getElementById('rot').classList.contains('hide')){document.getElementById('rot').classList.add('hide');return;}
     document.getElementById('rel').classList.add('hide');return;}
   if(pp&&(e.key==='ArrowDown'||e.key==='ArrowUp'||e.key==='Home'||e.key==='End')){
     var its=[].slice.call(pp.querySelectorAll('button')),i=its.indexOf(document.activeElement);
@@ -2027,6 +2136,11 @@ document.addEventListener('change',function(e){
     var gid=e.target.dataset.grpsel,g=+e.target.dataset.g,n=NT[gid],mark=e.target.checked;
     n.r.forEach(function(r,i){if(r[0]===g){if(mark)SEL[selKey(gid,i)]=1;else delete SEL[selKey(gid,i)];}});render();return;}
   if(e.target.dataset.resp){mudarResp(e.target.dataset.resp,e.target.value);return;}
+  if(e.target.dataset.rotin!=null||e.target.dataset.rotef!=null||e.target.dataset.rotv!=null){
+    var rel=document.getElementById('rot'),rt=tarefa(rel.dataset.id);if(!rt)return;
+    var ri=e.target.dataset.rotin!=null?e.target.dataset.rotin:e.target.dataset.rotef!=null?e.target.dataset.rotef:e.target.dataset.rotv,ro2=(ROT[rt.id]=ROT[rt.id]||{}),o=ro2[ri]=ro2[ri]||{};
+    if(e.target.dataset.rotin!=null)o.in=e.target.checked;else if(e.target.dataset.rotef!=null)o.ef=e.target.value;else o.v=parseFloat(e.target.value)||0;
+    gravarRot();var sc=document.getElementById('rotb').scrollTop;spedDe(rt).then(function(s2){rotRender(rt,s2);document.getElementById('rotb').scrollTop=sc;},function(){rotRender(rt,null);});return;}
   if(e.target.classList.contains('stsel')){
     var sid=e.target.dataset.sel,si=+e.target.dataset.i,sp={s:+e.target.value,u:''};
     if(sp.s===6&&!cst(sid,si).m)sp.m=mesAtual();
