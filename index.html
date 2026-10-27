@@ -298,6 +298,10 @@ table.rott small.cR{color:var(--late)}table.rott small.cN{color:var(--ok)}table.
 .spn h4{margin:14px 0 6px;font-size:12.5px;color:var(--title)}.spn .tw{overflow:auto;border:1px solid var(--line);border-radius:8px}
 .spr{margin-top:12px}.spr summary{cursor:pointer;font-size:12.5px;color:var(--link)}.spr pre{margin:8px 0 0;padding:10px;background:var(--th);border-radius:8px;font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-all}
 .nt .spv{margin-top:4px}
+#cfg .card{margin-bottom:14px}#cfg .cfgl .row{display:flex;align-items:center;justify-content:space-between;padding:9px 18px;gap:10px;border-top:1px solid var(--line2)}#cfg .cfgl .row>span{flex:1}#cfg .cfgl .row .meta{color:var(--muted);font-size:12.5px;margin-left:6px}#cfg .cfgadd input{flex:1;margin:0;max-width:360px;font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}#cfg .cfgadd{justify-content:flex-start}
+#cfg .tw{overflow:auto}#cfg table.cfgt td{vertical-align:middle;font-size:12.5px}#cfg table.cfgt input[type=text],#cfg table.cfgt input:not([type]){width:100%;min-width:160px;font:inherit;font-size:12.5px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
+#cfg table.cfgt input[type=color]{width:34px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none}#cfg table.cfgt select{font:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
+#cfg .cfgf{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 18px}#cfg .cfgf .note{margin:0;flex:1;min-width:240px}#cfg .note{padding:0 2px}
 #texcl .row{padding:10px 18px;gap:10px}#texcl .row>span{flex:1}#texcl .row .meta{font-size:12.5px;color:var(--muted)}
 #relb td:not(:first-child){white-space:nowrap}
 #rel .note{margin:0;padding:9px 18px;border-top:1px solid var(--line)}
@@ -456,6 +460,8 @@ table.rott small.cR{color:var(--late)}table.rott small.cN{color:var(--ok)}table.
   <div class="side-sec">Consulta</div>
   <button class="tab" role="tab" data-t="emp" aria-selected="false"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10 21v-3h4v3"/></svg></span><span class="tx">Empresas</span><span class="bd" id="bdemp" title="Empresas na malha"></span></button>
   <button class="tab" role="tab" data-t="tipos" aria-selected="false"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01"/></svg></span><span class="tx">Tipos de crítica</span></button>
+  <div class="side-sec hide" id="sadm">Administração</div>
+  <button class="tab hide" role="tab" data-t="cfg" id="tabcfg" aria-selected="false"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span><span class="tx">Configurações</span></button>
  </nav>
  <div class="side-foot">
   <div id="quem"></div>
@@ -478,6 +484,7 @@ table.rott small.cR{color:var(--late)}table.rott small.cN{color:var(--ok)}table.
 
 <section id="painel"></section>
 <section id="alt" class="hide"></section>
+<section id="cfg" class="hide"></section>
 
 <section id="mapa" class="hide">
  <div class="toolbar">
@@ -557,9 +564,31 @@ table.rott small.cR{color:var(--late)}table.rott small.cN{color:var(--ok)}table.
 <script>
 (function(){
 var D=JSON.parse(document.getElementById('dados').textContent);
-var TALL=D.tasks, T=D.tasks, AV=D.av, NT=D.notas||{}, S={}, C={}, RESP={}, OCULTA={}, db=null, uid=null, U=null, canWrite=true, NOMES={}, EU='';
+var TALL=D.tasks, T=D.tasks, AV=D.av, NT=D.notas||{}, S={}, C={}, RESP={}, OCULTA={}, CFG={}, db=null, uid=null, U=null, canWrite=true, NOMES={}, EU='';
 // A situação 6 é a crítica já verificada cuja correção entra no SPED de outro mês; o mês fica no campo m da crítica (MM/AAAA).
 var STN=['Sem avaliação','A corrigir','Corrigida','Não será corrigida','Bug da SEFAZ','Em análise','Corrigir no SPED do mês','Pendente'];
+// Configurações do administrador (malha_cfg/geral ou cópia local): responsáveis (av), situações (st: nome, cor, pendente,
+// ativo por id; ids acima de 7 são novas) e regras de correção por tipo (regras). STN0 são os nomes de fábrica.
+var STN0=STN.slice(),STOFF={},STPEND={},STCOR={};
+function stIds(){var o=[];for(var i=1;i<STN.length;i++)if(!STOFF[i])o.push(i);return o;}
+function aplicarCfg(){
+  AV=(CFG.av&&CFG.av.length?CFG.av:D.av).slice();
+  var st=CFG.st||{},ids=Object.keys(st).map(Number).filter(function(x){return x>0;}),max=Math.max(STN0.length-1,ids.length?Math.max.apply(null,ids):0);
+  STN=[];STOFF={};STPEND={};STCOR={};
+  for(var i=0;i<=max;i++){var o=st[i]||{};STN[i]=o.n||STN0[i]||('Situação '+i);if(o.ativo===false)STOFF[i]=true;if(i>=STN0.length){STPEND[i]=!!o.pend;if(!o.n)STOFF[i]=true;}if(o.cor)STCOR[i]=o.cor;}
+  var el=document.getElementById('chips');if(el&&el.dataset.ok)chipsHtml(el);
+  var fmw=document.getElementById('fmw');if(fmw)fmw.innerHTML='<option value="">Todos os responsáveis</option>'+AV.map(function(a){return '<option value="'+esc(a)+'">'+esc(a)+'</option>';}).join('');
+  if(document.getElementById('eu'))mostrarEU();
+  aplicarResp();
+}
+async function salvarCfg(parte,oque){
+  var antes=CFG;CFG=Object.assign({},CFG,parte);aplicarCfg();
+  if(LOCAL){gravarLocal();render();stmsg('Configuração salva (só neste aparelho): '+oque+'.');return true;}
+  if(!db||!canWrite){CFG=antes;aplicarCfg();return false;}
+  registrar('config',null,0,oque);
+  try{await db.doc('cfg/geral').update(Object.assign({},parte,{por:uid||'',em:db.agora()}));stmsg('Configuração salva para toda a equipe: '+oque+'.');render();return true;}
+  catch(e){CFG=antes;aplicarCfg();render();stmsg('Não foi possível salvar a configuração ('+e.code+').',true);return false;}
+}
 // Sub-situação (campo u da crítica): só para Corrigir no SPED do mês, que fica Pendente até o SPED daquele mês ser
 // transmitido. Bug da SEFAZ não tem sub-situação: marcar já encerra a crítica (não vai mais e-mail para a SEFAZ).
 var SUB={6:[['p','Pendente'],['c','Concluído']]};
@@ -585,7 +614,7 @@ function resumo(t){
   for(var i=0;i<n.r.length;i++){
     var c=cst(t.id,i),s=c.s|0;r[s]++;
     if(s===6){if(subDe(c)==='c')r.f6++;else r.pd++;}
-    else if(s===1||s===5||s===7)r.pd++;
+    else if(s===1||s===5||s===7||STPEND[s])r.pd++;
   }
   return r;
 }
@@ -700,6 +729,7 @@ async function iniciar(){
     db.recentes('log',300,function(snap){LOGS=snap.docs.map(function(d){return d.data();});nomes();render();},function(){});
     db.collection('resp').onSnapshot(function(snap){var novo={};snap.docs.forEach(function(d){novo[d.id]=d.data();});RESP=novo;aplicarResp();render();},function(){});
     db.collection('oculta').onSnapshot(function(snap){var novo={};snap.docs.forEach(function(d){novo[d.id]=d.data();});OCULTA=novo;aplicarOculta();render();},function(){});
+    db.collection('cfg').onSnapshot(function(snap){var g=null;snap.docs.forEach(function(d){if(d.id==='geral')g=d.data();});CFG=g||{};aplicarCfg();render();},function(){});
   }
   if(db.fb)db.collection('conf').onSnapshot(function(snap){
     var novo={};snap.docs.forEach(function(d){var v=d.data(),a=CONFR[d.id];
@@ -722,7 +752,7 @@ var FBURL='https://www.gstatic.com/firebasejs/12.17.1/',FB=null,ADM=false,MEUNOM
 /* ---------- histórico de atividade ---------- */
 // ATIV: contadores por usuário (malha_ativ). LOGS: as últimas alterações (malha_log), mais recentes primeiro.
 var ATIV={},LOGS=[];
-var ACAO={acesso:'entrou no quadro',concluiu:'concluiu a competência',reabriu:'reabriu a competência',pendente:'marcou a competência como Pendente de retorno',standby:'colocou a competência em Standby',anotou:'anotou na competência',avaliou:'avaliou 1 crítica',critica:'anotou em 1 crítica',mes:'definiu o mês do SPED de 1 crítica',sub:'alterou a sub-situação de 1 crítica',marcou:'marcou {n} críticas',conferiu:'conferiu {n} críticas com o SPED',ajustou:'ajustou a data da conclusão',responsavel:'trocou o responsável',excluiu:'excluiu uma empresa do quadro ({n} competências)',restaurou:'restaurou uma empresa no quadro ({n} competências)',enviou:'enviou {n} marcações feitas sem login',importou:'importou uma cópia do andamento'};
+var ACAO={acesso:'entrou no quadro',concluiu:'concluiu a competência',reabriu:'reabriu a competência',pendente:'marcou a competência como Pendente de retorno',standby:'colocou a competência em Standby',anotou:'anotou na competência',avaliou:'avaliou 1 crítica',critica:'anotou em 1 crítica',mes:'definiu o mês do SPED de 1 crítica',sub:'alterou a sub-situação de 1 crítica',marcou:'marcou {n} críticas',conferiu:'conferiu {n} críticas com o SPED',ajustou:'ajustou a data da conclusão',responsavel:'trocou o responsável',config:'alterou as configurações',excluiu:'excluiu uma empresa do quadro ({n} competências)',restaurou:'restaurou uma empresa no quadro ({n} competências)',enviou:'enviou {n} marcações feitas sem login',importou:'importou uma cópia do andamento'};
 // Grava a ação no histórico e soma no contador de quem fez. Falha aqui não atrapalha a marcação em si.
 // Presença: a cada 2 min com a aba visível, grava a hora no contador do usuário (campo on). Não conta como ação.
 var PRESENCA=0;
@@ -1086,11 +1116,77 @@ function alteracoes(){
   document.getElementById('alt').innerHTML=h;
 }
 
+/* ---------- configurações (administrador) ---------- */
+function configuracoes(){
+  var pode=ADM||LOCAL;
+  document.getElementById('tabcfg').classList.toggle('hide',!pode);document.getElementById('sadm').classList.toggle('hide',!pode);
+  if(!pode){document.getElementById('cfg').innerHTML='';return;}
+  var h='<p class="note">Tudo o que for salvo aqui vale para toda a equipe na hora'+(LOCAL?' (no modo local, só neste aparelho)':'')+'. Nada apaga marcações já feitas.</p>';
+  // responsáveis
+  h+='<div class="card"><div class="ch"><b>Responsáveis</b><span class="meta">quem aparece nos filtros, no Painel e na troca de responsável</span></div><div class="cfgl">'+
+    AV.map(function(a){var n=TALL.filter(function(t){return t.w===a&&!oculta(t.ie);}).length,ab=TALL.filter(function(t){return t.w===a&&!oculta(t.ie)&&!done(t);}).length;
+      return '<div class="row"><span><b>'+esc(a)+'</b> <span class="meta">'+n+(n===1?' competência':' competências')+(ab?' · '+ab+' em aberto':'')+'</span></span><button class="bt del" data-cfg-rmav="'+esc(a)+'">Remover</button></div>';}).join('')+
+    '<div class="row cfgadd"><input id="cfgav" placeholder="Nome do novo responsável" maxlength="40"><button class="bt" data-cfg-addav="1">Adicionar</button></div></div></div>';
+  // situações da crítica
+  var fixoPend={1:1,5:1,7:1,6:1};
+  h+='<div class="card"><div class="ch"><b>Situações da crítica</b><span class="meta">nome, cor, se conta como pendente e se aparece nas listas</span></div><div class="tw"><table class="big cfgt"><thead><tr><th>#</th><th>Nome</th><th>Cor</th><th>Pendente</th><th>Ativa</th><th>Uso</th></tr></thead><tbody>';
+  for(var i=1;i<STN.length;i++){var fixo=i<STN0.length,uso=0;TALL.forEach(function(t){var cc=C;var n=NT[t.id];if(!n)return;for(var k=0;k<n.r.length;k++)if((cst(t.id,k).s|0)===i)uso++;});
+    h+='<tr><td>'+i+'</td><td><input data-cfg-stn="'+i+'" value="'+esc(STN[i])+'" maxlength="40"'+(fixo?' title="De fábrica: '+esc(STN0[i])+'"':'')+'></td><td><input type="color" data-cfg-stc="'+i+'" value="'+esc(STCOR[i]||'#6b7690')+'"'+(fixo&&!STCOR[i]?' title="Cor de fábrica; mude para sobrepor"':'')+'></td>'+
+      '<td><input type="checkbox" data-cfg-stp="'+i+'"'+(fixo?(fixoPend[i]?' checked':'')+' disabled title="Fixo nas situações de fábrica"':(STPEND[i]?' checked':''))+'></td><td><input type="checkbox" data-cfg-sta="'+i+'"'+(STOFF[i]?'':' checked')+'></td><td class="n">'+num(uso)+'</td></tr>';}
+  h+='<tr class="cfgadd"><td>+</td><td><input id="cfgstn" placeholder="Nova situação (ex.: Aguardando cliente)" maxlength="40"></td><td><input type="color" id="cfgstc" value="#7048e8"></td><td><input type="checkbox" id="cfgstp" checked title="Conta como pendente"></td><td></td><td></td></tr></tbody></table></div>'+
+    '<div class="cfgf"><button class="bt" data-cfg-savest="1">Salvar situações</button><span class="note">Situação desativada some das listas, mas as críticas já marcadas com ela continuam como estão. As de fábrica (1 a 7) têm regras próprias de pendência.</span></div></div>';
+  // regras de correção por tipo
+  var tipos={};TALL.forEach(function(t){var n=NT[t.id];if(!n)return;n.t.forEach(function(tp){tipos[tp[1]+' · '+tp[0]]=1;});});
+  var ks=Object.keys(tipos).sort(),rg=CFG.regras||{};
+  h+='<div class="card"><div class="ch"><b>Regras de correção por tipo de crítica</b><span class="meta">usadas no Roteiro: texto da correção e efeito padrão na apuração</span></div><div class="tw"><table class="big cfgt"><thead><tr><th>Tipo de crítica</th><th>Correção sugerida (vazio = regra de fábrica)</th><th>Efeito padrão</th></tr></thead><tbody>'+
+    ks.map(function(k){var o=rg[k]||{};return '<tr><td>'+esc(k)+'</td><td><input data-cfg-rgc="'+esc(k)+'" value="'+esc(o.corr||'')+'" placeholder="regra de fábrica"></td><td><select data-cfg-rge="'+esc(k)+'"><option value="*"'+(o.ef==null||o.ef==='*'?' selected':'')+'>Regra de fábrica</option>'+Object.keys(EFN).map(function(e){return '<option value="'+e+'"'+(o.ef===e?' selected':'')+'>'+EFN[e]+'</option>';}).join('')+'</select></td></tr>';}).join('')+
+    '</tbody></table></div><div class="cfgf"><button class="bt" data-cfg-saverg="1">Salvar regras</button><span class="note">A regra de fábrica decide pelo que está no SPED e no XML (ex.: entrada sem crédito mantém crédito zero). O que você escrever aqui vale para todas as críticas desse tipo.</span></div></div>';
+  document.getElementById('cfg').innerHTML=h;
+}
+async function cfgAddAv(){
+  var el=document.getElementById('cfgav'),v=(el.value||'').trim().replace(/\s+/g,' ');
+  if(!v)return stmsg('Digite o nome do responsável.',true);
+  if(AV.some(function(a){return a.toLowerCase()===v.toLowerCase();}))return stmsg(v+' já está na lista.',true);
+  await salvarCfg({av:AV.concat(v)},'responsável '+v+' incluído');
+}
+async function cfgRmAv(nome){
+  var ts=TALL.filter(function(t){return t.w===nome&&!oculta(t.ie);}),outros=AV.filter(function(a){return a!==nome;});
+  if(!outros.length)return stmsg('Precisa ficar ao menos um responsável.',true);
+  var sub='';
+  if(ts.length){
+    sub=prompt('Quem assume as '+ts.length+' competências de '+nome+'? Digite o nome exato:\n'+outros.join(', '));
+    if(sub==null)return;sub=sub.trim();
+    if(outros.indexOf(sub)<0)return stmsg('Nome não encontrado: '+sub,true);
+  }else if(!confirm('Remover '+nome+' da lista de responsáveis?'))return;
+  if(ts.length){
+    stmsg('Passando '+ts.length+' competências para '+sub+'…');
+    for(var i=0;i<ts.length;i++){var id=ts[i].id;RESP[id]={w:sub,de:nome,por:uid||'',em:new Date().toISOString()};
+      if(!LOCAL&&db&&canWrite){try{await db.doc('resp/'+id).set({w:sub,de:nome,por:uid||'',em:db.agora()});}catch(e){stmsg('Não foi possível passar '+ts[i].e+' '+ts[i].r+' ('+e.code+'). Nada foi removido.',true);aplicarResp();render();return;}}}
+    if(LOCAL)gravarLocal();
+    registrar('responsavel',ts[0],ts.length,'de '+nome+' para '+sub+' ('+ts.length+' competências)');
+  }
+  await salvarCfg({av:outros},'responsável '+nome+' removido'+(ts.length?', competências com '+sub:''));
+}
+async function cfgSaveSt(){
+  var st={},i,el;
+  for(i=1;i<STN.length;i++){var n=(document.querySelector('[data-cfg-stn="'+i+'"]')||{}).value,c=(document.querySelector('[data-cfg-stc="'+i+'"]')||{}).value,p=document.querySelector('[data-cfg-stp="'+i+'"]'),a=document.querySelector('[data-cfg-sta="'+i+'"]');
+    n=(n||'').trim();var o={};if(n&&n!==STN0[i])o.n=n;else if(i>=STN0.length)o.n=n||STN[i];
+    if(c&&(i>=STN0.length||c!=='#6b7690'))o.cor=c;if(i>=STN0.length)o.pend=!!(p&&p.checked);if(a&&!a.checked)o.ativo=false;
+    if(Object.keys(o).length)st[i]=o;}
+  var nn=(document.getElementById('cfgstn').value||'').trim();
+  if(nn){var id=Math.max(STN0.length,STN.length);st[id]={n:nn,cor:document.getElementById('cfgstc').value,pend:document.getElementById('cfgstp').checked};}
+  await salvarCfg({st:st},'situações da crítica'+(nn?' (nova: '+nn+')':''));
+}
+async function cfgSaveRg(){
+  var rg={};document.querySelectorAll('[data-cfg-rgc]').forEach(function(el){var k=el.dataset.cfgRgc,s=document.querySelector('[data-cfg-rge="'+k.replace(/"/g,'\\"')+'"]'),c=(el.value||'').trim(),e=s?s.value:'*';if(c||e!=='*')rg[k]={corr:c,ef:e};});
+  await salvarCfg({regras:rg},'regras de correção');
+}
 /* ---------- cronograma ---------- */
+function chipsHtml(el){el.innerHTML='<button class="chip" data-w="" aria-pressed="'+(!filtro.w)+'">Todos</button>'+AV.map(function(a){return '<button class="chip" data-w="'+esc(a)+'" aria-pressed="'+(filtro.w===a)+'">'+esc(a)+'</button>';}).join('');}
 function chips(){
   var el=document.getElementById('chips');
   if(el.dataset.ok)return;el.dataset.ok='1';
-  el.innerHTML='<button class="chip" data-w="" aria-pressed="true">Todos</button>'+AV.map(function(a){return '<button class="chip" data-w="'+esc(a)+'">'+esc(a)+'</button>';}).join('');
+  chipsHtml(el);
   el.addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;filtro.w=b.dataset.w;
     el.querySelectorAll('.chip').forEach(function(c){c.setAttribute('aria-pressed',c===b);});lista();});
   var eu=document.getElementById('eu');
@@ -1145,7 +1241,7 @@ function resumochips(t){
   var r=resumo(t);if(!r)return'';
   var h='<div class="stchips">';
   if(r[0])h+='<span class="sc s0">'+r[0]+' sem avaliação</span>';
-  for(var i=1;i<STN.length;i++)if(r[i])h+='<span class="sc s'+i+'">'+r[i]+' '+(i===6?'para o SPED de outro mês':i===7?(r[i]===1?'pendente':'pendentes'):esc(STN[i].toLowerCase()))+(i===6&&r.f6?' ('+r.f6+(r.f6===1?' concluída)':' concluídas)'):'')+'</span>';
+  for(var i=1;i<STN.length;i++)if(r[i])h+='<span class="sc s'+i+'"'+(STCOR[i]?' style="background:'+STCOR[i]+'22;color:'+STCOR[i]+'"':'')+'>'+r[i]+' '+(i===6?'para o SPED de outro mês':i===7?(r[i]===1?'pendente':'pendentes'):esc(STN[i].toLowerCase()))+(i===6&&r.f6?' ('+r.f6+(r.f6===1?' concluída)':' concluídas)'):'')+'</span>';
   var cf=CONF[t.id];
   if(cf)h+='<span class="sc cfc">SPED: '+cfRes(cf.n)+'</span>';
   return h+'</div>';
@@ -1171,12 +1267,12 @@ function lista(){
 }
 var lim={},SEL={},LOCAL=false;
 var LK='malha-fina-andamento-v1';
-function carregarLocal(){try{var o=JSON.parse(localStorage.getItem(LK)||'{}');S=o.S||{};C=o.C||{};RESP=o.R||{};aplicarResp();OCULTA=o.O||{};aplicarOculta();EU=o.EU||'';if(EU)filtro.w=EU;}catch(e){}}
-function gravarLocal(){try{localStorage.setItem(LK,JSON.stringify({S:S,C:C,EU:EU,R:RESP,O:OCULTA}));}catch(e){stmsg('Não foi possível salvar neste navegador (armazenamento cheio ou bloqueado).',true);}}
+function carregarLocal(){try{var o=JSON.parse(localStorage.getItem(LK)||'{}');S=o.S||{};C=o.C||{};RESP=o.R||{};aplicarResp();OCULTA=o.O||{};aplicarOculta();CFG=o.G||{};aplicarCfg();EU=o.EU||'';if(EU)filtro.w=EU;}catch(e){}}
+function gravarLocal(){try{localStorage.setItem(LK,JSON.stringify({S:S,C:C,EU:EU,R:RESP,O:OCULTA,G:CFG}));}catch(e){stmsg('Não foi possível salvar neste navegador (armazenamento cheio ou bloqueado).',true);}}
 function selKey(id,i){return id+':'+i;}
 function selIdx(id){var o=[];Object.keys(SEL).forEach(function(k){if(SEL[k]&&k.indexOf(id+':')===0)o.push(+k.split(':')[1]);});return o;}
 function selHtml(id,i,s){
-  var o='';for(var k=0;k<STN.length;k++)o+='<option value="'+k+'"'+(k===s?' selected':'')+'>'+esc(STN[k])+'</option>';
+  var o='';for(var k=0;k<STN.length;k++){if(STOFF[k]&&k!==s)continue;o+='<option value="'+k+'"'+(k===s?' selected':'')+'>'+esc(STN[k])+'</option>';}
   return '<select class="stsel s'+s+'" data-sel="'+id+'" data-i="'+i+'">'+o+'</select>';
 }
 // Tipos de crítica abertos ou recolhidos dentro da competência. Com um tipo só, já abre; com vários, começam recolhidos
@@ -1190,7 +1286,7 @@ function detalhe(t){
     var selc=selIdx(t.id);
     h+='<div class="det">';
     h+='<div class="selbar'+(selc.length?'':' hide')+'" data-selbar="'+t.id+'"><span class="sbn">'+selc.length+' crítica'+(selc.length===1?'':'s')+' selecionada'+(selc.length===1?'':'s')+'</span>'+
-      '<span class="sbg"><span class="sbk">Marcar como:</span>'+[1,2,3,4,5,6,7].map(function(s){return '<button class="bt" data-selap="'+t.id+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+'</span>'+
+      '<span class="sbg"><span class="sbk">Marcar como:</span>'+stIds().map(function(s){return '<button class="bt" data-selap="'+t.id+'" data-s="'+s+'">'+esc(STN[s])+'</button>';}).join('')+'</span>'+
       '<span class="sbg"><span class="sbk">SPED do mês:</span><button class="bt" data-subap="'+t.id+'" data-u="p">Pendente</button><button class="bt" data-subap="'+t.id+'" data-u="c">Concluído</button></span>'+
       '<span class="sbg sbx"><button class="bt dl" data-chs="'+t.id+'">Baixar chaves (TXT)</button><button class="bt" data-selclr="'+t.id+'">Limpar seleção</button></span></div>';
     var cf=CONF[t.id];
@@ -1356,6 +1452,13 @@ var RK='malha-rot',ROT={};
 try{ROT=JSON.parse(localStorage.getItem(RK)||'{}');}catch(e){ROT={};}
 function gravarRot(){try{localStorage.setItem(RK,JSON.stringify(ROT));}catch(e){}}
 function regraCrit(tipo,op,r,c,x,dupVi){
+  var base=regraBase(tipo,op,r,c,x,dupVi),ov=CFG.regras&&CFG.regras[op+' · '+tipo];
+  if(!ov||(!ov.corr&&(ov.ef==null||ov.ef==='*')))return base;
+  var ef=ov.ef!=null&&ov.ef!=='*'?ov.ef:base.ef;
+  var v=ef===base.ef?base.v:(ef==='c-'||ef==='d-')?(c?c.vi:0):(ef==='c+'||ef==='d+')?(x&&x.vi!=null?x.vi:r[2]):0;
+  return {corr:ov.corr||base.corr,ef:ef,v:v};
+}
+function regraBase(tipo,op,r,c,x,dupVi){
   var ent=op==='Entrada',val=r[2],vi=c?c.vi:0,nvi=x&&x.vi!=null?x.vi:null,d=nvi!=null&&c?nvi-vi:null;
   if(/valor diferente ou incorreto de ICMS/i.test(tipo)){
     if(!c)return {corr:'Nota não encontrada no SPED importado: escriturar com o ICMS da nota',ef:'',v:val};
@@ -1967,9 +2070,9 @@ function selos(){
 var abertos={},pend=false;
 function render(){
   var ae=document.activeElement;
-  if(ae&&ae.classList&&(ae.classList.contains('obs')||ae.classList.contains('obsn')||ae.classList.contains('mesn'))){pend=true;return;}
+  if(ae&&ae.classList&&(ae.classList.contains('obs')||ae.classList.contains('obsn')||ae.classList.contains('mesn')||ae.closest('#cfg'))){pend=true;return;}
   pend=false;
-  kpis();painel();alteracoes();mapa();lista();empresas();tipos();selos();
+  kpis();painel();alteracoes();mapa();lista();empresas();tipos();selos();configuracoes();
   if(REL&&REL.k!=='u'&&!document.getElementById('rel').classList.contains('hide')){var rb=document.getElementById('relb'),rs=rb.scrollTop;relatorio(REL.k,REL.w,REL.sem);rb.scrollTop=rs;}
   Object.keys(abertos).forEach(function(id){var b=document.querySelector('[data-det="'+id+'"]');if(b)abrir(b,true);});
 }
@@ -1985,7 +2088,7 @@ document.addEventListener('click',function(e){
   var tab=e.target.closest('.tab');
   if(tab){document.querySelectorAll('.tab').forEach(function(b){b.setAttribute('aria-selected',b===tab);});
     document.getElementById('vtit').textContent=tab.querySelector('.tx').textContent;document.getElementById('side').classList.remove('aberto');
-    ['painel','mapa','alt','crono','emp','tipos'].forEach(function(s){document.getElementById(s).classList.toggle('hide',s!==tab.dataset.t);});
+    ['painel','mapa','alt','crono','emp','tipos','cfg'].forEach(function(s){document.getElementById(s).classList.toggle('hide',s!==tab.dataset.t);});
     // Meta e indicadores no Painel; no Dashboard só a faixa da meta.
     document.getElementById('over').classList.toggle('hide',tab.dataset.t!=='painel'&&tab.dataset.t!=='mapa');
     document.getElementById('kpis').classList.toggle('hide',tab.dataset.t==='mapa');
@@ -2040,6 +2143,10 @@ document.addEventListener('click',function(e){
   if(cs2){baixarChaves(cs2.dataset.chs,selIdx(cs2.dataset.chs),'selecionadas');return;}
   var aj=e.target.closest('[data-ajd]');
   if(aj){ajustarData(aj.dataset.ajd);return;}
+  var ca1=e.target.closest('[data-cfg-addav]');if(ca1){cfgAddAv();return;}
+  var ca2=e.target.closest('[data-cfg-rmav]');if(ca2){cfgRmAv(ca2.dataset.cfgRmav);return;}
+  if(e.target.closest('[data-cfg-savest]')){cfgSaveSt();return;}
+  if(e.target.closest('[data-cfg-saverg]')){cfgSaveRg();return;}
   var exc=e.target.closest('[data-exc]');
   if(exc){excluirEmpresa(exc.dataset.exc,false);return;}
   var rst=e.target.closest('[data-rest]');
