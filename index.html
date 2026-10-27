@@ -1775,7 +1775,9 @@ document.addEventListener('click',function(e){
   if(tab){document.querySelectorAll('.tab').forEach(function(b){b.setAttribute('aria-selected',b===tab);});
     document.getElementById('vtit').textContent=tab.querySelector('.tx').textContent;document.getElementById('side').classList.remove('aberto');
     ['painel','mapa','alt','crono','emp','tipos'].forEach(function(s){document.getElementById(s).classList.toggle('hide',s!==tab.dataset.t);});
-    document.getElementById('over').classList.toggle('hide',tab.dataset.t!=='painel');
+    // Meta e indicadores no Painel; no Dashboard só a faixa da meta.
+    document.getElementById('over').classList.toggle('hide',tab.dataset.t!=='painel'&&tab.dataset.t!=='mapa');
+    document.getElementById('kpis').classList.toggle('hide',tab.dataset.t==='mapa');
     if(tab.dataset.t==='crono')chips();return;}
   var go=e.target.closest('[data-go]');
   if(go){document.querySelector('.tab[data-t="crono"]').click();filtro.w=go.dataset.go;
