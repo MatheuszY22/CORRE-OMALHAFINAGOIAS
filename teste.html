@@ -442,24 +442,28 @@ table.rott small.cR{color:var(--late)}table.rott small.cN{color:var(--ok)}table.
 .acoes .spacer{display:none}
 }
 
-/* ===== VERSÃO DE TESTE (invertida): tipo de crítica claro × críticas em azul AZUOS ===== */
-.grp,.grp.op{background:var(--card);border-top:1px solid var(--line);box-shadow:inset 4px 0 0 #F5C400}
-.gtx b{color:var(--title);font-size:14.5px}
-.gtg i{background:#F5C400;border-color:#F5C400;color:#111}
-.gtg[aria-expanded=true] i{background:#113783;border-color:#113783;color:#fff}
-.nt{background:#113783;color:#fff;border-top:1px solid rgba(255,255,255,.14)}
-:root[data-theme="dark"] .nt{background:#1B2757}
-.nt .nf,.nt .vv{color:#fff}
-.nt .id small,.nt .chv,.nt .doc{color:rgba(255,255,255,.75)}
-.nt .canc{background:rgba(255,255,255,.16);color:#ffd5d5}
-.nt .obsn{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:#fff}
-.nt .obsn::placeholder{color:rgba(255,255,255,.6)}
-.nt .obsn:focus{background:rgba(255,255,255,.16);border-color:#F5C400;box-shadow:0 0 0 3px rgba(245,196,0,.3)}
-.nt .lnk,.nt .spv{color:#F5C400}
-.nt .cf{background:rgba(255,255,255,.95);color:#333}
-.nt .mesl{color:rgba(255,255,255,.85)}
-.nt.s2,.nt.s3,.nt.fz{opacity:.78}
-.nt input[type=checkbox]{accent-color:#F5C400}
+/* ===== VERSÃO DE TESTE: cartão da empresa em azul AZUOS × críticas em branco ===== */
+.t,.t:hover,.t.done{background:#113783;color:#fff;border-bottom:1px solid rgba(255,255,255,.18)}
+:root[data-theme="dark"] .t,:root[data-theme="dark"] .t:hover,:root[data-theme="dark"] .t.done{background:#1B2757}
+.t.done{background:#0f2f6b}
+.tn{color:#fff;font-size:15px}
+.t.done .tn{color:rgba(255,255,255,.7);text-decoration-color:rgba(255,255,255,.5)}
+.tm,.tm b,.t .when,.pg,.pg b,.tv small{color:rgba(255,255,255,.85)}
+.tv{color:#fff}
+.t .lnk{color:#F5C400}
+.t .tag,.t .sc{background:rgba(255,255,255,.16);color:#fff}
+.t .pg .bar{background:rgba(255,255,255,.25)}.t .pg .bar i{background:#F5C400}
+.t .obs{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:#fff}.t .obs::placeholder{color:rgba(255,255,255,.6)}
+.t .rsel{color:#fff;border-color:rgba(255,255,255,.45)}.t .rsel option{color:#111;background:#fff}
+.t .cbx{accent-color:#F5C400}
+.t [data-ajd]{color:#F5C400}
+/* dentro do painel de críticas tudo volta ao claro */
+.det{margin-top:12px;color:var(--fg);background:var(--card)}
+.det .lnk{color:var(--link)}.det .tag{background:var(--barbg);color:var(--muted)}.det .tag.nc{background:var(--warnbg);color:var(--warn)}.det .tag.h{background:var(--accent-soft);color:var(--accent)}
+.det .sc{background:var(--barbg);color:var(--muted)}.det .pg,.det .pg b{color:var(--muted)}.det .pg .bar{background:var(--barbg)}.det .pg .bar i{background:var(--ok)}
+.det .obs,.det .obsn{background:var(--hover);border-color:var(--line2);color:var(--fg)}.det .obsn::placeholder{color:var(--muted2)}
+.det .cbx,.det input[type=checkbox]{accent-color:var(--accent)}
+.det .lnk.spv,.det [data-spv]{color:var(--link)}
 #vteste{position:fixed;right:14px;bottom:14px;z-index:90;padding:7px 12px;border-radius:999px;background:#F5C400;color:#111;font-size:11.5px;font-weight:700;letter-spacing:.5px;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
 </style>
 </head>
