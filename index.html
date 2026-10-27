@@ -279,6 +279,18 @@ button.cel:focus-visible{outline-offset:1px}
 #relx{width:32px;height:32px;border:0;border-radius:8px;background:none;padding:0;font-size:22px;line-height:1;color:var(--muted);cursor:pointer}
 #relx:hover{background:var(--hover);color:var(--fg)}
 #relb{overflow:auto}
+/* visualizador do SPED */
+#spv{position:fixed;inset:0;z-index:56;display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;background:rgba(12,19,48,.58)}
+#spvx{width:32px;height:32px;border:0;border-radius:8px;background:none;padding:0;font-size:22px;line-height:1;color:var(--muted);cursor:pointer}#spvx:hover{background:var(--hover);color:var(--fg)}
+#spvb{overflow:auto;padding:14px 18px 18px}
+.spc{padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:var(--th);margin-bottom:14px;font-size:13px}.spc .l{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:3px}.spc .cf{margin-top:8px}
+.spn{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.sph{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px;color:var(--muted);margin-bottom:10px}.sph b{font-family:var(--f-display);font-size:16px;color:var(--title)}
+.spg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px 14px;margin-bottom:6px}
+.kv span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}.kv b{font-family:var(--f-mono);font-size:13px;font-weight:600;color:var(--fg);word-break:break-all}.kv em{font-style:normal;color:var(--accent)}
+.spn h4{margin:14px 0 6px;font-size:12.5px;color:var(--title)}.spn .tw{overflow:auto;border:1px solid var(--line);border-radius:8px}
+.spr{margin-top:12px}.spr summary{cursor:pointer;font-size:12.5px;color:var(--link)}.spr pre{margin:8px 0 0;padding:10px;background:var(--th);border-radius:8px;font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-all}
+.nt .spv{margin-top:4px}
 #relb td:not(:first-child){white-space:nowrap}
 #rel .note{margin:0;padding:9px 18px;border-top:1px solid var(--line)}
 /* ---------- login ---------- */
@@ -514,6 +526,10 @@ button.cel:focus-visible{outline-offset:1px}
  <div class="relh"><b id="relt"></b><span class="meta" id="rels"></span><button class="bt" id="relcsv">Exportar CSV</button><button id="relx" aria-label="Fechar">×</button></div>
  <div id="relb"></div>
  <p class="note" style="margin:0;padding:9px 16px;border-top:1px solid var(--line)">Clique em uma linha para abrir a competência no cronograma.</p>
+</div></div>
+<div id="spv" class="hide"><div class="relc" role="dialog" aria-modal="true" aria-labelledby="spvt">
+ <div class="relh"><b id="spvt"></b><span class="meta" id="spvs"></span><button id="spvx" aria-label="Fechar">×</button></div>
+ <div id="spvb"></div>
 </div></div>
 <div id="login" class="hide"><form class="lgc" id="lgf">
  <div class="lgh"><img id="lgi" alt="AZUOS Assessoria Contábil"></div>
@@ -1143,7 +1159,7 @@ function selHtml(id,i,s){
 var GRP={};
 function gab(id,g,n){var k=id+':'+g;return k in GRP?GRP[k]:n===1;}
 function detalhe(t){
-  var n=NT[t.id],h='';
+  var n=NT[t.id],h='',spok=n&&spedDisp(t);
   if(n){
     var max=lim[t.id]||150;
     var selc=selIdx(t.id);
@@ -1193,6 +1209,7 @@ function detalhe(t){
           (st.s?'<input class="obsn" data-obsn="'+t.id+'" data-i="'+i+'" placeholder="Anotação (protocolo, motivo, nº do chamado…)" value="'+esc(st.o||'')+'">':'')+
           (st.s&&idxs.length>1?'<button class="lnk rep" data-rep="'+t.id+'" data-i="'+i+'">Replicar este texto nas outras '+num(idxs.length-1)+(idxs.length===2?' crítica':' críticas')+' deste tipo</button>':'')+
           (cf&&cf.r&&cf.r[i]?'<div class="cf c'+cf.r[i][0]+'"><b>'+CFN[cf.r[i][0]]+'</b>'+esc(cf.r[i][1])+'</div>':'')+
+          (spok&&String(r[3]).length===44?'<button class="lnk spv" data-spv="'+t.id+'" data-ch="'+esc(r[3])+'" title="Abrir o que está escriturado no SPED desta nota">Ver no SPED</button>':'')+
           '</div>';
       });
     });
@@ -1272,26 +1289,86 @@ function arr2(v){return Math.round(v*100)/100;}
 function cfRes(n){return n.R+(n.R===1?' confirmada':' confirmadas')+' · '+n.N+(n.N===1?' não confirmada':' não confirmadas')+' · '+n.I+(n.I===1?' inconclusiva':' inconclusivas');}
 function dvOk(ch){var s=0,p=2;for(var i=42;i>=0;i--){s+=(+ch.charAt(i))*p;p=p===9?2:p+1;}var r=s%11;return (r<2?0:11-r)===+ch.charAt(43);}
 function lerSped(txt){
-  var cab=null,part={},idx={},nota=null,n=0,p=txt.charCodeAt(0)===0xFEFF?1:0,q,ln,f,reg;
+  var cab=null,part={},pnome={},itens={},idx={},nota=null,n=0,p=txt.charCodeAt(0)===0xFEFF?1:0,q,ln,f,reg;
   while(p<txt.length){
     q=txt.indexOf('\n',p);if(q<0)q=txt.length;
     ln=txt.substring(p,q);p=q+1;
     if(ln.charCodeAt(0)!==124)continue;
     reg=ln.substr(1,4);
     if(reg==='C190'){
-      if(nota){f=ln.split('|');nota.so+=nsp(f[5]);if(f[3]&&nota.cf.indexOf(f[3])<0)nota.cf.push(f[3]);}
+      if(nota){f=ln.split('|');nota.so+=nsp(f[5]);if(f[3]&&nota.cf.indexOf(f[3])<0)nota.cf.push(f[3]);nota.lns.push(ln);}
     }else if(reg==='C100'){
       f=ln.split('|');n++;
-      nota={op:f[2],em:f[3],pa:f[4],sit:f[6],ser:f[7],num:f[8],ch:(f[9]||'').replace(/\D/g,''),dd:f[10],de:f[11],vd:nsp(f[12]),vi:nsp(f[22]),so:0,cf:[]};
+      nota={op:f[2],em:f[3],pa:f[4],sit:f[6],ser:f[7],num:f[8],ch:(f[9]||'').replace(/\D/g,''),dd:f[10],de:f[11],vd:nsp(f[12]),vi:nsp(f[22]),so:0,cf:[],lns:[ln]};
       if(nota.ch.length===44)(idx[nota.ch]=idx[nota.ch]||[]).push(nota);
+    }else if(nota&&reg.charCodeAt(0)===67&&reg.charAt(1)==='1'){
+      nota.lns.push(ln); // C110…C197: filhos do C100 (itens, totais, observações)
     }else if(reg==='0150'){
-      f=ln.split('|');part[f[2]]=(f[5]||f[6]||'').replace(/\D/g,'');
+      f=ln.split('|');part[f[2]]=(f[5]||f[6]||'').replace(/\D/g,'');pnome[f[2]]=f[3]||'';
+    }else if(reg==='0200'){
+      f=ln.split('|');itens[f[2]]={d:f[3]||'',u:f[6]||'',n:f[8]||''};
     }else if(reg==='0000'&&!cab){
       f=ln.split('|');cab={fin:f[3],ini:f[4]||'',nome:f[6]||'',cnpj:(f[7]||'').replace(/\D/g,''),ie:(f[10]||'').replace(/\D/g,'').replace(/^0+/,'')};
     }
   }
   if(!cab||cab.ini.length!==8)return null;
-  return {cab:cab,ie:cab.ie,per:cab.ini.slice(2),idx:idx,part:part,n:n};
+  return {cab:cab,ie:cab.ie,per:cab.ini.slice(2),idx:idx,part:part,pnome:pnome,itens:itens,n:n};
+}
+/* ---------- SPED guardado no navegador e visualizador por nota ---------- */
+// O .txt importado fica no IndexedDB deste aparelho (índice em localStorage) para abrir a nota depois, sem reimportar.
+var SPK='malha-speds';
+function spIdx(){try{return JSON.parse(localStorage.getItem(SPK)||'{}');}catch(e){return {};}}
+function idb(){return new Promise(function(ok,err){var r=indexedDB.open('malha-sped',1);r.onupgradeneeded=function(){r.result.createObjectStore('sped');};r.onsuccess=function(){ok(r.result);};r.onerror=function(){err(r.error);};});}
+function idbPut(k,v){return idb().then(function(d){return new Promise(function(ok,err){var tx=d.transaction('sped','readwrite');tx.objectStore('sped').put(v,k);tx.oncomplete=ok;tx.onerror=function(){err(tx.error);};});});}
+function idbGet(k){return idb().then(function(d){return new Promise(function(ok,err){var r=d.transaction('sped').objectStore('sped').get(k);r.onsuccess=function(){ok(r.result);};r.onerror=function(){err(r.error);};});});}
+async function guardarSpedDisco(s,txt,nome){
+  var k=s.ie+'-'+s.per,ix=spIdx(),a=ix[k];
+  if(a&&a.fin==='1'&&s.cab.fin!=='1')return; // retificador guardado não é trocado pelo original
+  try{await idbPut(k,{txt:txt,nome:nome,at:new Date().toISOString(),fin:s.cab.fin});ix=spIdx();ix[k]={nome:nome,at:new Date().toISOString(),fin:s.cab.fin};localStorage.setItem(SPK,JSON.stringify(ix));}catch(e){} // relê o índice depois do await: várias gravações correm juntas
+}
+function spedChave(t){var k=t.id.split('-');return k[0].replace(/^0+/,'')+'-'+k[1];}
+function spedDisp(t){var k=t.id.split('-'),ie=k[0].replace(/^0+/,'');return !!((SPEDS[ie]&&SPEDS[ie][k[1]])||spIdx()[spedChave(t)]);}
+async function spedDe(t){
+  var k=t.id.split('-'),ie=k[0].replace(/^0+/,'');
+  if(SPEDS[ie]&&SPEDS[ie][k[1]])return SPEDS[ie][k[1]];
+  var v=await idbGet(spedChave(t));if(!v)return null;
+  var s=lerSped(v.txt);if(!s)return null;guardarSped(s);return (SPEDS[ie]&&SPEDS[ie][k[1]])||s;
+}
+var SIT={'00':'Regular','01':'Extemporâneo','02':'Cancelado','03':'Cancelado extemporâneo','04':'Denegado','05':'Inutilizado','06':'Complementar','07':'Complementar extemporâneo','08':'Regime especial'};
+function dsp(d){d=String(d||'').trim();return d.length===8?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):'—';}
+function vlr(f,i){return brl(nsp(f[i]));}
+function fcnpj(d){d=String(d||'').replace(/\D/g,'');return d.length===14?d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'):d.length===11?d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'):d;}
+function kv(k,v){return '<div class="kv"><span>'+k+'</span><b>'+v+'</b></div>';}
+function notaSpedHtml(nt,s){
+  var f=nt.lns[0].split('|'),part=s.part[f[4]]||'',pn=(s.pnome&&s.pnome[f[4]])||'';
+  var h='<div class="spn"><div class="sph"><b>NF nº '+esc(f[8])+'</b><span>série '+esc(f[7]||'—')+'</span><span>modelo '+esc(f[5])+'</span><span>'+(f[2]==='0'?'Entrada':'Saída')+'</span><span>emissão '+(f[3]==='0'?'própria':'de terceiros')+'</span><span class="tag '+(f[6]==='00'?'ok':'nc')+'">'+esc(SIT[f[6]]||('situação '+f[6]))+'</span></div>'+
+    '<div class="spg">'+kv('Chave','<span class="chv">'+esc(f[9])+'</span>')+kv('Participante',(pn?esc(pn)+' · ':'')+(part?fcnpj(part):esc(f[4]||'—')))+kv('Emissão',dsp(f[10]))+kv('Entrada / saída',dsp(f[11]))+
+    kv('Valor do documento',vlr(f,12))+kv('Mercadorias',vlr(f,16))+kv('Desconto',vlr(f,14))+kv('Base do ICMS',vlr(f,21))+kv('ICMS escriturado','<em>'+vlr(f,22)+'</em>')+kv('Base ICMS ST',vlr(f,23))+kv('ICMS ST',vlr(f,24))+kv('IPI',vlr(f,25))+kv('PIS',vlr(f,26))+kv('COFINS',vlr(f,27))+'</div>';
+  var c170=nt.lns.filter(function(l){return l.substr(1,4)==='C170';}),c190=nt.lns.filter(function(l){return l.substr(1,4)==='C190';});
+  if(c170.length)h+='<h4>Itens da nota (C170)</h4><div class="tw"><table class="big"><thead><tr><th>#</th><th>Item</th><th>CFOP</th><th>CST</th><th class="n">Qtd</th><th class="n">Valor</th><th class="n">Base ICMS</th><th class="n">Alíq.</th><th class="n">ICMS</th></tr></thead><tbody>'+
+    c170.map(function(l){var g=l.split('|'),it=s.itens&&s.itens[g[3]];return '<tr><td>'+esc(g[2])+'</td><td>'+esc(g[3])+(it&&it.d?' · '+esc(it.d):'')+(g[4]?' <small>'+esc(g[4])+'</small>':'')+'</td><td>'+esc(g[11])+'</td><td>'+esc(g[10])+'</td><td class="n">'+esc(g[5])+' '+esc(g[6])+'</td><td class="n">'+vlr(g,7)+'</td><td class="n">'+vlr(g,13)+'</td><td class="n">'+esc(g[14]||'—')+'</td><td class="n">'+vlr(g,15)+'</td></tr>';}).join('')+'</tbody></table></div>';
+  if(c190.length)h+='<h4>Totais por CST e CFOP (C190)</h4><div class="tw"><table class="big"><thead><tr><th>CST</th><th>CFOP</th><th class="n">Alíq.</th><th class="n">Valor da operação</th><th class="n">Base ICMS</th><th class="n">ICMS</th><th class="n">Base ST</th><th class="n">ICMS ST</th><th class="n">Red. base</th><th class="n">IPI</th></tr></thead><tbody>'+
+    c190.map(function(l){var g=l.split('|');return '<tr><td>'+esc(g[2])+'</td><td>'+esc(g[3])+'</td><td class="n">'+esc(g[4]||'—')+'</td><td class="n">'+vlr(g,5)+'</td><td class="n">'+vlr(g,6)+'</td><td class="n">'+vlr(g,7)+'</td><td class="n">'+vlr(g,8)+'</td><td class="n">'+vlr(g,9)+'</td><td class="n">'+vlr(g,10)+'</td><td class="n">'+vlr(g,11)+'</td></tr>';}).join('')+'</tbody></table></div>';
+  var regs=nt.lns.map(function(l){return l.substr(1,4);}).filter(function(x,i,a){return a.indexOf(x)===i;});
+  h+='<details class="spr"><summary>Linhas originais do SPED ('+nt.lns.length+(nt.lns.length===1?' registro':' registros')+': '+regs.join(', ')+')</summary><pre>'+esc(nt.lns.join('\n'))+'</pre></details></div>';
+  return h;
+}
+async function verSped(id,ch){
+  var t=tarefa(id);if(!t)return;
+  var el=document.getElementById('spv'),b=document.getElementById('spvb');
+  document.getElementById('spvt').textContent=t.e+' · '+t.r;document.getElementById('spvs').textContent='';
+  b.innerHTML='<div class="empty">Lendo o SPED…</div>';el.classList.remove('hide');document.getElementById('spvx').focus();
+  var s=null;try{s=await spedDe(t);}catch(e){}
+  if(!s){b.innerHTML='<div class="empty">O SPED desta competência não está neste aparelho. Importe o arquivo .txt pelo botão Importar e abra de novo.</div>';return;}
+  var ix=spIdx()[spedChave(t)];
+  document.getElementById('spvs').textContent=(s.cab.fin==='1'?'SPED retificador':'SPED original')+' de '+t.r+' · '+s.cab.nome+(ix?' · importado neste aparelho em '+dhora(new Date(ix.at)):'');
+  var n=NT[t.id],ri=-1;if(n)n.r.forEach(function(r,i){if(String(r[3])===ch)ri=i;});
+  var crit=ri>=0?n.r[ri]:null,tipo=crit?n.t[crit[0]]:null,cf=CONF[t.id],cfr=cf&&cf.r&&cf.r[ri],h='';
+  if(crit)h+='<div class="spc"><span class="l">Crítica da SEFAZ</span><b>'+esc(tipo[0])+'</b> · '+esc(tipo[1])+' · NF '+esc(crit[1])+' · '+brl(crit[2])+(cfr?'<div class="cf c'+cfr[0]+'"><b>'+CFN[cfr[0]]+'</b>'+esc(cfr[1])+'</div>':'')+'</div>';
+  var ns=s.idx[ch]||[];
+  if(!ns.length)h+='<div class="empty">A chave '+esc(ch)+' não aparece em nenhum C100 deste SPED: a nota não está escriturada nesta competência.</div>';
+  ns.forEach(function(nt){h+=notaSpedHtml(nt,s);});
+  b.innerHTML=h;
 }
 function guardarSped(s){
   var E=SPEDS[s.ie]=SPEDS[s.ie]||{},a=E[s.per];
@@ -1428,20 +1505,20 @@ async function lerZip(buf,cada){
 }
 async function importarConf(files){
   var ns=0,nx=0,ign=0,fora=0,semdet=0;
-  function um(u8){
+  function um(u8,nome){
     var x=decod(u8),s;
     if(x.slice(0,8).indexOf('|0000|')>=0){
       s=lerSped(x);if(!s){ign++;return;}
       guardarSped(s);ns++;
       var t=T.filter(function(y){var k=y.id.split('-');return k[0].replace(/^0+/,'')===s.ie&&k[1]===s.per;})[0];
-      if(!t)fora++;else if(!NT[t.id])semdet++;
+      if(!t)fora++;else{guardarSpedDisco(s,x,nome);if(!NT[t.id])semdet++;} // só guarda no aparelho o SPED de competência do quadro
     }else if(lerXml(x))nx++;else ign++;
   }
   for(var i=0;i<files.length;i++){
     if(i%25===0)stmsg('Lendo arquivos para a conferência… '+i+' de '+files.length);
     try{
       var buf=await files[i].arrayBuffer();
-      if(/\.zip$/i.test(files[i].name))await lerZip(buf,um);else um(new Uint8Array(buf));
+      if(/\.zip$/i.test(files[i].name))await lerZip(buf,function(u8){um(u8,files[i].name);});else um(new Uint8Array(buf),files[i].name);
     }catch(e){ign++;}
   }
   conferirTudo();
@@ -1843,6 +1920,9 @@ document.addEventListener('click',function(e){
   if(cs2){baixarChaves(cs2.dataset.chs,selIdx(cs2.dataset.chs),'selecionadas');return;}
   var aj=e.target.closest('[data-ajd]');
   if(aj){ajustarData(aj.dataset.ajd);return;}
+  var sv=e.target.closest('[data-spv]');
+  if(sv){verSped(sv.dataset.spv,sv.dataset.ch);return;}
+  if(e.target.id==='spvx'||e.target.id==='spv'){document.getElementById('spv').classList.add('hide');return;}
   var sb=e.target.closest('[data-subap]');
   if(sb){var bid=sb.dataset.subap,bu=sb.dataset.u,bt=selIdx(bid).length;
     // Cada sub-situação só serve para a situação a que pertence: as outras selecionadas ficam como estão.
@@ -1886,6 +1966,7 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     var ab=document.querySelector('[data-pop][aria-expanded="true"]');
     if(ab){fecharPops();ab.focus();return;}
+    if(!document.getElementById('spv').classList.contains('hide')){document.getElementById('spv').classList.add('hide');return;}
     document.getElementById('rel').classList.add('hide');return;}
   if(pp&&(e.key==='ArrowDown'||e.key==='ArrowUp'||e.key==='Home'||e.key==='End')){
     var its=[].slice.call(pp.querySelectorAll('button')),i=its.indexOf(document.activeElement);
