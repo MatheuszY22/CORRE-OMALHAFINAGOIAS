@@ -88,6 +88,19 @@ h1{margin:0 0 1px;font-family:var(--f-display);font-weight:700;font-size:20px;le
 .kpi .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:5px}
 .kpi .v{font-family:var(--f-mono);font-size:18px;font-weight:600;letter-spacing:-.6px;font-variant-numeric:tabular-nums;color:var(--title)}
 .kpi .s{font-size:11.5px;color:var(--muted2);margin-top:2px}
+/* progresso geral x meta */
+.meta{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px 16px 12px;margin:0 0 6px;box-shadow:var(--shadow)}
+.meta .mh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.meta .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+.meta .v{font-family:var(--f-mono);font-size:26px;font-weight:600;letter-spacing:-.8px;font-variant-numeric:tabular-nums;color:var(--title)}
+.meta .mt{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:3px 10px;border-radius:20px}
+.meta.ok .mt{color:var(--ok);background:var(--okbg)}.meta.late .mt{color:var(--late);background:var(--latebg)}
+.meta .mbar{position:relative;height:14px;background:var(--barbg);border-radius:8px;margin:9px 0 7px;overflow:visible}
+.meta .mbar i{display:block;height:100%;background:var(--royal);border-radius:8px;transition:width .25s}
+.meta.ok .mbar i{background:var(--ok)}
+.meta .mbar em{position:absolute;top:-5px;bottom:-5px;width:3px;margin-left:-1px;background:var(--late);border-radius:2px}
+.meta .mbar em::after{content:attr(data-l);position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:700;color:var(--late);white-space:nowrap}
+.meta .ms{font-size:12.5px;color:var(--muted2)}.meta .ms b{color:var(--fg)}
 .kpi.ok .v{color:var(--ok)} .kpi.late .v{color:var(--late)}
 .bar{height:8px;background:var(--barbg);border-radius:6px;overflow:hidden;margin-top:8px}
 .bar i{display:block;height:100%;background:var(--ok);border-radius:6px;transition:width .25s}
@@ -365,7 +378,7 @@ table.big tr[data-rel]:hover td,#relb tr[data-ir]:hover td{background:var(--hove
 </div>
 <div class="wrap">
 <div class="kpis" id="kpis"></div>
-<div class="bar" style="height:10px"><i id="gbar" style="width:0%"></i></div>
+<div class="meta" id="meta"></div>
 <p class="status" id="st">Carregando…</p>
 
 <section id="painel"></section>
@@ -837,19 +850,33 @@ function kpis(){
   var tot=T.length,c=T.filter(done).length,at=T.filter(late).length;
   var vt=0,vc=0;T.forEach(function(t){vt+=t.v;if(done(t))vc+=t.v;});
   var hoje=T.filter(function(t){return t.d===HOJE;}),hc=hoje.filter(done).length;
-  var av=0,tc=0;T.forEach(function(x){var r=resumo(x);if(r){r=prog(r);tc+=r.tot;av+=r.av;}});
+  var av=0,tc=0,ncr=0;T.forEach(function(x){var r=resumo(x);if(r){r=prog(r);tc+=r.tot;av+=r.av;ncr++;}});
   var nfp=T.filter(foraPrazo).length,npd=0,ncp=0;T.forEach(function(x){var r=resumo(x);if(r&&r.pd){npd+=r.pd;ncp++;}});
   var nemp=T.map(function(x){return x.e+'|'+x.ie;}).filter(function(x,i,a){return a.indexOf(x)===i;}).length;
-  var K=[['Total da malha',String(tot),'competências de '+nemp+' empresas · '+brlc(vt),''],
-   ['Concluídas',c+' de '+tot,(tot?Math.round(c*100/tot):0)+'% do plano'+(nfp?' · '+nfp+' fora do prazo':''),c===tot?'ok':''],
-   ['Valor já resolvido',brlc(vc),'de '+brlc(vt)+' em críticas','ok'],
-   ['Pendentes',num(npd),npd?(npd===1?'crítica a resolver em ':'críticas a resolver em ')+ncp+(ncp===1?' competência':' competências'):'nenhuma crítica aguardando ação',''],
-   ['Atrasadas',String(at),at?'competências com data vencida':'nenhuma data vencida',at?'late':''],
-   ['Para hoje',hc+' de '+hoje.length,hoje.length?'competências programadas para hoje':'sem programação para hoje',''],
-   ['Críticas avaliadas',num(av)+' de '+num(tc),(tc?Math.round(av*100/tc):0)+'% das críticas com PDF',av===tc&&tc?'ok':''],
-   ['Término previsto',dt(D.fim).toLocaleDateString('pt-BR'),'início em '+dt(D.start).toLocaleDateString('pt-BR'),'']];
-  document.getElementById('kpis').innerHTML=K.map(function(k,i){return '<button class="kpi '+k[3]+'" data-rel="'+'zcvpahkt'.charAt(i)+'" title="Abrir a lista"><span class="l">'+k[0]+'</span><span class="v">'+k[1]+'</span><span class="s">'+k[2]+'</span></button>';}).join('');
-  document.getElementById('gbar').style.width=(tot?c*100/tot:0)+'%';
+  // Críticas resolvidas = avaliadas que não estão mais pendentes (corrigidas, não procedem, bug da SEFAZ, SPED do mês concluído).
+  var ab=tot-c,res=av-npd;
+  var K=[['Total da malha',String(tot),'competências de '+nemp+' empresas · '+brlc(vt),'','z'],
+   ['Concluídas',c+' de '+tot,(tot?Math.round(c*100/tot):0)+'% do plano'+(nfp?' · '+nfp+' fora do prazo':''),c===tot?'ok':'','c'],
+   ['Pendentes',String(ab),ab?'competências em aberto'+(at?' · '+at+(at===1?' atrasada':' atrasadas'):''):'nenhuma competência em aberto',at?'late':'','t'],
+   ['Valor pendente',brlc(vt-vc),'em '+ab+(ab===1?' competência':' competências')+' em aberto',ab?'':'ok','n'],
+   ['Valor já resolvido',brlc(vc),'de '+brlc(vt)+' em críticas','ok','v'],
+   ['Críticas total',num(tc),'em '+ncr+(ncr===1?' competência':' competências')+' com PDF · '+num(av)+' avaliadas','','k'],
+   ['Críticas já resolvidas',num(res)+' de '+num(tc),(tc?Math.round(res*100/tc):0)+'% das críticas · '+num(npd)+' pendentes',res===tc&&tc?'ok':'','r']];
+  document.getElementById('kpis').innerHTML=K.map(function(k,i){return '<button class="kpi '+k[3]+'" data-rel="'+k[4]+'" title="Abrir a lista"><span class="l">'+k[0]+'</span><span class="v">'+k[1]+'</span><span class="s">'+k[2]+'</span></button>';}).join('');
+  metaHtml(c,tot);
+}
+// Meta geral: percentual de competências concluídas que a equipe precisa atingir até a data.
+var META={p:80,ate:'2026-10-31'};
+function metaHtml(c,tot){
+  var pc=tot?c*100/tot:0,alvo=Math.ceil(tot*META.p/100),falta=Math.max(0,alvo-c);
+  var dias=Math.round((dt(META.ate)-dt(HOJE))/864e5),ateBR=META.ate.slice(8)+'/'+META.ate.slice(5,7)+'/'+META.ate.slice(0,4);
+  var cls=pc>=META.p?'ok':dias<0?'late':'',s;
+  if(pc>=META.p)s='<b>'+num(c)+' de '+num(tot)+'</b> concluídas · meta de '+META.p+'% atingida'+(dias>=0?' com '+dias+(dias===1?' dia de folga':' dias de folga'):'');
+  else if(dias<0)s='<b>'+num(c)+' de '+num(tot)+'</b> concluídas · a meta de '+META.p+'% venceu em '+ateBR+' faltando <b>'+num(falta)+'</b>';
+  else s='<b>'+num(c)+' de '+num(tot)+'</b> concluídas · faltam <b>'+num(falta)+'</b> para chegar a '+num(alvo)+' ('+META.p+'%) · '+(dias===0?'<b>hoje é o último dia</b>':'<b>'+dias+(dias===1?' dia':' dias')+'</b> até '+fdata(META.ate)+' · ritmo necessário: <b>'+Math.ceil(falta/dias)+' por dia</b>');
+  document.getElementById('meta').className='meta '+cls;
+  document.getElementById('meta').innerHTML='<div class="mh"><span class="l">Progresso geral</span><b class="v">'+(Math.round(pc*10)/10).toLocaleString('pt-BR')+'%</b><span class="mt">Meta: '+META.p+'% até '+ateBR+'</span></div>'+
+    '<div class="mbar"><i style="width:'+Math.min(100,pc)+'%"></i><em style="left:'+META.p+'%" data-l="'+META.p+'%" title="Meta de '+META.p+'%"></em></div><div class="ms">'+s+'</div>';
 }
 function painel(){
   var h=db&&db.fb&&ADM?atividadeHtml():'';
@@ -1556,10 +1583,14 @@ function relatorio(k,w,sem){
     ts=ts.filter(function(t){var r=resumo(t);return r&&r.pd;}).sort(function(a,b){return resumo(b).pd-resumo(a).pd;});
     tit='Críticas pendentes por competência';cab=CB.concat(['A corrigir','Em análise','Pendente','SPED do mês pendente','Total pendente','Valor']);
     lin=ts.map(function(t){var r=resumo(t);return base(t).concat([num(r[1]),num(r[5]),num(r[7]),num(r[6]-r.f6),num(r.pd),brl(t.v)]);});
+  }else if(k==='r'){
+    ts=ts.filter(function(t){return NT[t.id];}).sort(function(a,b){var ra=resumo(a),rb=resumo(b);return (prog(rb).av-rb.pd)-(prog(ra).av-ra.pd)||b.q-a.q;});
+    tit='Críticas já resolvidas por competência';cab=CB.concat(['Resolvidas','Pendentes','Sem avaliação','Total','Situação','Valor']);
+    lin=ts.map(function(t){var r=resumo(t),g=prog(r);return base(t).concat([num(g.av-r.pd),num(r.pd),num(g.tot-g.av),num(g.tot),situacao(t),brl(t.v)]);});
   }else{
-    if(k==='t')ts=ts.filter(function(t){return !done(t);});
-    ts.sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:a.w.localeCompare(b.w);});
-    tit=k==='t'?'Competências em aberto':k==='z'?'Todas as competências da malha':ts.length?'Semana de '+fdata(ts[0].d)+' a '+fdata(ts[ts.length-1].d):'Semana';
+    if(k==='t'||k==='n')ts=ts.filter(function(t){return !done(t);});
+    ts.sort(function(a,b){return k==='n'?b.v-a.v:a.d<b.d?-1:a.d>b.d?1:a.w.localeCompare(b.w);});
+    tit=k==='n'?'Valor pendente por competência':k==='t'?'Competências em aberto':k==='z'?'Todas as competências da malha':ts.length?'Semana de '+fdata(ts[0].d)+' a '+fdata(ts[ts.length-1].d):'Semana';
     cab=CB.concat(['Situação','Críticas avaliadas','Críticas pendentes','Valor']);
     lin=ts.map(function(t){var r=resumo(t);return base(t).concat([situacao(t),aval(t),r?num(r.pd):'—',brl(t.v)]);});
   }
