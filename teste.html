@@ -442,21 +442,24 @@ table.rott small.cR{color:var(--late)}table.rott small.cN{color:var(--ok)}table.
 .acoes .spacer{display:none}
 }
 
-/* ===== VERSÃO DE TESTE: tipo de crítica (azul AZUOS) × críticas (branco, NF em preto com marcador âmbar) ===== */
-.grp,.grp.op{background:#113783;border-top:0;box-shadow:none;color:#fff}
-:root[data-theme="dark"] .grp,:root[data-theme="dark"] .grp.op{background:#1B2757}
-.gtx b{color:#fff;font-size:14px}
-.grp .meta,.grp .meta *,.gpt,.grpchk{color:rgba(255,255,255,.85)}
-.gop{background:rgba(255,255,255,.18);color:#fff}
-.gtg i{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.4);color:#fff}
-.gtg[aria-expanded=true] i,.gtg:hover i{background:#F5C400;border-color:#F5C400;color:#111}
-.gtg:hover b{text-decoration-color:#F5C400}
-.gbar{background:rgba(255,255,255,.25)}.gbar i{background:#F5C400}.gpr.ok .gbar i{background:#5fd19b}
-.grpchk input{accent-color:#F5C400}
-.nt{box-shadow:inset 3px 0 0 #F5C400}
-.nt .nf{color:#161616;font-size:13.5px}
-:root[data-theme="dark"] .nt .nf{color:#EDF1FA}
-.nt .id small{color:var(--muted)}
+/* ===== VERSÃO DE TESTE (invertida): tipo de crítica claro × críticas em azul AZUOS ===== */
+.grp,.grp.op{background:var(--card);border-top:1px solid var(--line);box-shadow:inset 4px 0 0 #F5C400}
+.gtx b{color:var(--title);font-size:14.5px}
+.gtg i{background:#F5C400;border-color:#F5C400;color:#111}
+.gtg[aria-expanded=true] i{background:#113783;border-color:#113783;color:#fff}
+.nt{background:#113783;color:#fff;border-top:1px solid rgba(255,255,255,.14)}
+:root[data-theme="dark"] .nt{background:#1B2757}
+.nt .nf,.nt .vv{color:#fff}
+.nt .id small,.nt .chv,.nt .doc{color:rgba(255,255,255,.75)}
+.nt .canc{background:rgba(255,255,255,.16);color:#ffd5d5}
+.nt .obsn{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:#fff}
+.nt .obsn::placeholder{color:rgba(255,255,255,.6)}
+.nt .obsn:focus{background:rgba(255,255,255,.16);border-color:#F5C400;box-shadow:0 0 0 3px rgba(245,196,0,.3)}
+.nt .lnk,.nt .spv{color:#F5C400}
+.nt .cf{background:rgba(255,255,255,.95);color:#333}
+.nt .mesl{color:rgba(255,255,255,.85)}
+.nt.s2,.nt.s3,.nt.fz{opacity:.78}
+.nt input[type=checkbox]{accent-color:#F5C400}
 #vteste{position:fixed;right:14px;bottom:14px;z-index:90;padding:7px 12px;border-radius:999px;background:#F5C400;color:#111;font-size:11.5px;font-weight:700;letter-spacing:.5px;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
 </style>
 </head>
