@@ -1066,13 +1066,12 @@ function painel(){
   AV.forEach(function(a){
     var ts=T.filter(function(t){return t.w===a;}),c=ts.filter(done).length,at=ts.filter(late).length;
     var v=0,vc=0;ts.forEach(function(t){v+=t.v;if(done(t))vc+=t.v;});
-    var prox=ts.filter(function(t){return !done(t);})[0];
-    var ga=STN.map(function(){return 0;});ts.forEach(function(t){var r=resumo(t);if(r)for(var i=0;i<r.length;i++)ga[i]+=r[i];});ga=prog(ga);
+    // críticas resolvidas = avaliadas que não estão mais pendentes (mesmo critério do indicador do Painel)
+    var ga=STN.map(function(){return 0;}),gpd=0;ts.forEach(function(t){var r=resumo(t);if(r){for(var i=0;i<r.length;i++)ga[i]+=r[i];gpd+=r.pd;}});ga=prog(ga);var gres=ga.av-gpd;
     h+='<div class="pc"><div class="pch"><span class="av '+avCls(a)+'" aria-hidden="true">'+iniciais(a)+'</span><div><h3>'+esc(a)+'</h3><div class="n" data-rel="c" data-w="'+esc(a)+'" tabindex="0">'+c+' de '+ts.length+' concluídas · '+Math.round(c*100/ts.length)+'%</div></div></div>'+
       '<div class="bar"><i style="width:'+(c*100/ts.length)+'%"></i></div>'+
-      '<div class="row"><span>Valor resolvido</span><b>'+brlc(vc)+' / '+brlc(v)+'</b></div>'+
-      '<div class="row" data-rel="k" data-w="'+esc(a)+'" tabindex="0"><span>Críticas avaliadas</span><b>'+num(ga.av)+' de '+num(ga.tot)+' · '+ga.p+'%</b></div>'+
-      '<div class="row"><span>'+(prox?'Próxima':'Fila')+'</span><b>'+(prox?esc(prox.e.slice(0,22))+' '+prox.r+' · '+fdata(prox.d):'concluída')+'</b></div>'+
+      '<div class="row" data-rel="r" data-w="'+esc(a)+'" tabindex="0"><span>Críticas resolvidas</span><b>'+num(gres)+' de '+num(ga.tot)+' · '+(ga.tot?Math.round(gres*100/ga.tot):0)+'%</b></div>'+
+      '<div class="row" data-rel="v" data-w="'+esc(a)+'" tabindex="0"><span>Valor resolvido</span><b>'+brlc(vc)+' de '+brlc(v)+'</b></div>'+
       '<button class="lnk" data-go="'+esc(a)+'">Ver cronograma de '+esc(a)+' →</button></div>';
   });
   h+='</div>';
