@@ -291,6 +291,7 @@ button.cel:focus-visible{outline-offset:1px}
 .spn h4{margin:14px 0 6px;font-size:12.5px;color:var(--title)}.spn .tw{overflow:auto;border:1px solid var(--line);border-radius:8px}
 .spr{margin-top:12px}.spr summary{cursor:pointer;font-size:12.5px;color:var(--link)}.spr pre{margin:8px 0 0;padding:10px;background:var(--th);border-radius:8px;font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-all}
 .nt .spv{margin-top:4px}
+#texcl .row{padding:10px 18px;gap:10px}#texcl .row>span{flex:1}#texcl .row .meta{font-size:12.5px;color:var(--muted)}
 #relb td:not(:first-child){white-space:nowrap}
 #rel .note{margin:0;padding:9px 18px;border-top:1px solid var(--line)}
 /* ---------- login ---------- */
@@ -512,7 +513,7 @@ button.cel:focus-visible{outline-offset:1px}
  <div id="lista"></div>
 </section>
 
-<section id="emp" class="hide"><div class="scroll"><table class="big" id="tempresas"></table></div></section>
+<section id="emp" class="hide"><div class="scroll"><table class="big" id="tempresas"></table></div><div id="texcl"></div></section>
 <section id="tipos" class="hide">
  <p class="note">Quantidade e valor por tipo de crítica, com o quanto já foi concluído.</p>
  <div class="scroll"><table class="big" id="ttipos"></table></div>
@@ -550,7 +551,7 @@ button.cel:focus-visible{outline-offset:1px}
 <script>
 (function(){
 var D=JSON.parse(document.getElementById('dados').textContent);
-var T=D.tasks, AV=D.av, NT=D.notas||{}, S={}, C={}, RESP={}, db=null, uid=null, U=null, canWrite=true, NOMES={}, EU='';
+var TALL=D.tasks, T=D.tasks, AV=D.av, NT=D.notas||{}, S={}, C={}, RESP={}, OCULTA={}, db=null, uid=null, U=null, canWrite=true, NOMES={}, EU='';
 // A situação 6 é a crítica já verificada cuja correção entra no SPED de outro mês; o mês fica no campo m da crítica (MM/AAAA).
 var STN=['Sem avaliação','A corrigir','Corrigida','Não será corrigida','Bug da SEFAZ','Em análise','Corrigir no SPED do mês','Pendente'];
 // Sub-situação (campo u da crítica): só para Corrigir no SPED do mês, que fica Pendente até o SPED daquele mês ser
@@ -692,6 +693,7 @@ async function iniciar(){
     db.collection('ativ').onSnapshot(function(snap){var novo={};snap.docs.forEach(function(d){novo[d.id]=d.data();});ATIV=novo;nomes();render();},function(){});
     db.recentes('log',300,function(snap){LOGS=snap.docs.map(function(d){return d.data();});nomes();render();},function(){});
     db.collection('resp').onSnapshot(function(snap){var novo={};snap.docs.forEach(function(d){novo[d.id]=d.data();});RESP=novo;aplicarResp();render();},function(){});
+    db.collection('oculta').onSnapshot(function(snap){var novo={};snap.docs.forEach(function(d){novo[d.id]=d.data();});OCULTA=novo;aplicarOculta();render();},function(){});
   }
   if(db.fb)db.collection('conf').onSnapshot(function(snap){
     var novo={};snap.docs.forEach(function(d){var v=d.data(),a=CONFR[d.id];
@@ -714,7 +716,7 @@ var FBURL='https://www.gstatic.com/firebasejs/12.17.1/',FB=null,ADM=false,MEUNOM
 /* ---------- histórico de atividade ---------- */
 // ATIV: contadores por usuário (malha_ativ). LOGS: as últimas alterações (malha_log), mais recentes primeiro.
 var ATIV={},LOGS=[];
-var ACAO={acesso:'entrou no quadro',concluiu:'concluiu a competência',reabriu:'reabriu a competência',pendente:'marcou a competência como Pendente de retorno',standby:'colocou a competência em Standby',anotou:'anotou na competência',avaliou:'avaliou 1 crítica',critica:'anotou em 1 crítica',mes:'definiu o mês do SPED de 1 crítica',sub:'alterou a sub-situação de 1 crítica',marcou:'marcou {n} críticas',conferiu:'conferiu {n} críticas com o SPED',ajustou:'ajustou a data da conclusão',responsavel:'trocou o responsável',enviou:'enviou {n} marcações feitas sem login',importou:'importou uma cópia do andamento'};
+var ACAO={acesso:'entrou no quadro',concluiu:'concluiu a competência',reabriu:'reabriu a competência',pendente:'marcou a competência como Pendente de retorno',standby:'colocou a competência em Standby',anotou:'anotou na competência',avaliou:'avaliou 1 crítica',critica:'anotou em 1 crítica',mes:'definiu o mês do SPED de 1 crítica',sub:'alterou a sub-situação de 1 crítica',marcou:'marcou {n} críticas',conferiu:'conferiu {n} críticas com o SPED',ajustou:'ajustou a data da conclusão',responsavel:'trocou o responsável',excluiu:'excluiu uma empresa do quadro ({n} competências)',restaurou:'restaurou uma empresa no quadro ({n} competências)',enviou:'enviou {n} marcações feitas sem login',importou:'importou uma cópia do andamento'};
 // Grava a ação no histórico e soma no contador de quem fez. Falha aqui não atrapalha a marcação em si.
 // Presença: a cada 2 min com a aba visível, grava a hora no contador do usuário (campo on). Não conta como ação.
 var PRESENCA=0;
@@ -734,6 +736,23 @@ function registrar(tipo,tk,n,det){
 function tarefa(id){return T.filter(function(x){return x.id===id;})[0];}
 // Responsável: o do plano (w0) ou o que o administrador trocou (RESP, coleção malha_resp / cópia local).
 function aplicarResp(){T.forEach(function(t){if(!t.w0)t.w0=t.w;var r=RESP[t.id];t.w=r&&r.w&&AV.indexOf(r.w)>=0?r.w:t.w0;});}
+// Empresas excluídas do quadro pelo administrador (coleção malha_oculta / cópia local): as competências somem de todas
+// as telas, mas o registro fica e a empresa pode ser restaurada na aba Empresas.
+function ieDig(ie){return String(ie||'').replace(/\D/g,'');}
+function oculta(ie){var o=OCULTA[ieDig(ie)];return !!(o&&o.ativa!==true);}
+function aplicarOculta(){T=TALL.filter(function(t){return !oculta(t.ie);});}
+async function excluirEmpresa(ie,restaurar){
+  var k=ieDig(ie),ts=TALL.filter(function(t){return ieDig(t.ie)===k;});if(!ts.length)return;
+  var e=ts[0].e,n=ts.length,antes=OCULTA[k];
+  if(!restaurar&&!confirm('Excluir '+e+' do quadro?\n\n'+(n===1?'A competência dela some':'As '+n+' competências dela somem')+' de todas as telas, para toda a equipe. Dá para restaurar depois, no fim da aba Empresas.'))return;
+  OCULTA[k]={e:e,ativa:!!restaurar,por:uid||'',em:new Date().toISOString()};aplicarOculta();
+  if(LOCAL){gravarLocal();render();stmsg(e+(restaurar?' voltou para o quadro':' excluída do quadro')+' (só neste aparelho).');return;}
+  if(!db||!canWrite){if(antes)OCULTA[k]=antes;else delete OCULTA[k];aplicarOculta();return;}
+  registrar(restaurar?'restaurou':'excluiu',ts[0],n,e);
+  try{await db.doc('oculta/'+k).set({e:e,ativa:!!restaurar,por:uid||'',em:db.agora()});stmsg(e+(restaurar?' voltou para o quadro.':' excluída do quadro: '+n+(n===1?' competência':' competências')+' a menos.'));}
+  catch(err){if(antes)OCULTA[k]=antes;else delete OCULTA[k];aplicarOculta();stmsg('Não foi possível '+(restaurar?'restaurar':'excluir')+' ('+err.code+').',true);}
+  render();
+}
 async function mudarResp(id,w){
   var t=tarefa(id);if(!t||AV.indexOf(w)<0||w===t.w)return;
   var antes=t.w,anterior=RESP[id];
@@ -1146,8 +1165,8 @@ function lista(){
 }
 var lim={},SEL={},LOCAL=false;
 var LK='malha-fina-andamento-v1';
-function carregarLocal(){try{var o=JSON.parse(localStorage.getItem(LK)||'{}');S=o.S||{};C=o.C||{};RESP=o.R||{};aplicarResp();EU=o.EU||'';if(EU)filtro.w=EU;}catch(e){}}
-function gravarLocal(){try{localStorage.setItem(LK,JSON.stringify({S:S,C:C,EU:EU,R:RESP}));}catch(e){stmsg('Não foi possível salvar neste navegador (armazenamento cheio ou bloqueado).',true);}}
+function carregarLocal(){try{var o=JSON.parse(localStorage.getItem(LK)||'{}');S=o.S||{};C=o.C||{};RESP=o.R||{};aplicarResp();OCULTA=o.O||{};aplicarOculta();EU=o.EU||'';if(EU)filtro.w=EU;}catch(e){}}
+function gravarLocal(){try{localStorage.setItem(LK,JSON.stringify({S:S,C:C,EU:EU,R:RESP,O:OCULTA}));}catch(e){stmsg('Não foi possível salvar neste navegador (armazenamento cheio ou bloqueado).',true);}}
 function selKey(id,i){return id+':'+i;}
 function selIdx(id){var o=[];Object.keys(SEL).forEach(function(k){if(SEL[k]&&k.indexOf(id+':')===0)o.push(+k.split(':')[1]);});return o;}
 function selHtml(id,i,s){
@@ -1233,9 +1252,13 @@ function empresas(){
     var p=por[k],r=resumo(t);p.n++;p.v+=t.v;p.ms.push(t.r.slice(0,2));if(done(t)){p.c++;p.vc+=t.v;}if(late(t))p.at++;
     if(r){r=prog(r);p.av+=r.av;p.tc+=r.tot;}});
   var L=Object.keys(por).map(function(k){return por[k];}).sort(function(a,b){return b.v-a.v;});
-  var h='<thead><tr><th>Empresa</th><th>IE</th><th>Responsável</th><th class="n">Competências</th><th class="n">Concluídas</th><th class="n">Críticas avaliadas</th><th class="n">Valor</th><th class="n">Valor resolvido</th></tr></thead><tbody>';
-  L.forEach(function(p){h+='<tr><td>'+esc(p.e)+'<div class="tm">'+(p.mu?'<span>'+esc(p.mu)+'</span>':'')+'<span>meses '+p.ms.join(', ')+'</span></div></td><td>'+p.ie+'</td><td>'+esc(p.w)+'</td><td class="n">'+p.n+'</td><td class="n">'+p.c+'</td><td class="n">'+(p.tc?num(p.av)+' de '+num(p.tc)+' · '+Math.floor(p.av*100/p.tc)+'%':'—')+'</td><td class="n">'+brl(p.v)+'</td><td class="n">'+brl(p.vc)+'</td></tr>';});
+  var h='<thead><tr><th>Empresa</th><th>IE</th><th>Responsável</th><th class="n">Competências</th><th class="n">Concluídas</th><th class="n">Críticas avaliadas</th><th class="n">Valor</th><th class="n">Valor resolvido</th>'+((ADM||LOCAL)?'<th></th>':'')+'</tr></thead><tbody>';
+  L.forEach(function(p){h+='<tr><td>'+esc(p.e)+'<div class="tm">'+(p.mu?'<span>'+esc(p.mu)+'</span>':'')+'<span>meses '+p.ms.join(', ')+'</span></div></td><td>'+p.ie+'</td><td>'+esc(p.w)+'</td><td class="n">'+p.n+'</td><td class="n">'+p.c+'</td><td class="n">'+(p.tc?num(p.av)+' de '+num(p.tc)+' · '+Math.floor(p.av*100/p.tc)+'%':'—')+'</td><td class="n">'+brl(p.v)+'</td><td class="n">'+brl(p.vc)+'</td>'+((ADM||LOCAL)?'<td class="n"><button class="bt del" data-exc="'+p.ie+'" title="Tirar esta empresa do quadro (dá para restaurar)">Excluir</button></td>':'')+'</tr>';});
   document.getElementById('tempresas').innerHTML=h+'</tbody>';
+  // empresas excluídas: ficam listadas no fim da aba, com o botão de restaurar para o administrador
+  var ex=Object.keys(OCULTA).filter(function(k){return oculta(k);}).map(function(k){var o=OCULTA[k],ts=TALL.filter(function(t){return ieDig(t.ie)===k;}),d=o.em&&o.em.toDate?o.em.toDate():o.em?new Date(o.em):null;return {k:k,e:o.e||(ts[0]&&ts[0].e)||k,ie:ts[0]?ts[0].ie:k,n:ts.length,por:NOMES[o.por]||o.por||'',d:d};}).sort(function(a,b){return a.e.localeCompare(b.e);});
+  document.getElementById('texcl').innerHTML=ex.length?'<div class="card" style="margin-top:14px"><div class="ch"><b>Empresas excluídas do quadro ('+ex.length+')</b><span class="meta">não entram em nenhuma tela nem nos totais; restaurar devolve as competências como estavam</span></div>'+
+    ex.map(function(x){return '<div class="row"><span>'+esc(x.e)+' <span class="meta">IE '+esc(x.ie)+' · '+x.n+(x.n===1?' competência':' competências')+(x.por?' · excluída por '+esc(x.por):'')+(x.d?' em '+dhora(x.d):'')+'</span></span>'+((ADM||LOCAL)?'<button class="bt" data-rest="'+x.k+'">Restaurar</button>':'')+'</div>';}).join('')+'</div>':'';
 }
 function tipos(){
   var por={};
@@ -1920,6 +1943,10 @@ document.addEventListener('click',function(e){
   if(cs2){baixarChaves(cs2.dataset.chs,selIdx(cs2.dataset.chs),'selecionadas');return;}
   var aj=e.target.closest('[data-ajd]');
   if(aj){ajustarData(aj.dataset.ajd);return;}
+  var exc=e.target.closest('[data-exc]');
+  if(exc){excluirEmpresa(exc.dataset.exc,false);return;}
+  var rst=e.target.closest('[data-rest]');
+  if(rst){excluirEmpresa(rst.dataset.rest,true);return;}
   var sv=e.target.closest('[data-spv]');
   if(sv){verSped(sv.dataset.spv,sv.dataset.ch);return;}
   if(e.target.id==='spvx'||e.target.id==='spv'){document.getElementById('spv').classList.add('hide');return;}
